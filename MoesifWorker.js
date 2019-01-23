@@ -6,13 +6,15 @@
 
 const applicationId = INSTALL_OPTIONS.appId;
 const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards;
+const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader;
+const userIdHeader = INSTALL_OPTIONS.userIdHeader;
 
 const identifyUser = (req, res) => {
-  return undefined;
+  return req.headers[userIdHeader] || res.headers[userIdHeader];
 };
 
 const getSessionToken = (req, res) => {
-  return undefined;
+  return req.headers[sessionTokenHeader] || res.headers[sessionTokenHeader];
 };
 
 const getApiVersion = (req, res) => {
@@ -198,9 +200,9 @@ async function makeMoesifEvent(request, response, before, after) {
 async function handleBatch() {
   if (!batchRunning) {
     batchRunning = true;
-    
+
     await sleep(BATCH_DURATION);
-    
+
     if (moesifEvents.length) await batch();
 
     batchRunning = false;
@@ -218,7 +220,7 @@ function batch() {
       },
       body: JSON.stringify(moesifEvents)
     };
-    
+
     moesifEvents = [];
 
     return fetch(BATCH_URL, options);
