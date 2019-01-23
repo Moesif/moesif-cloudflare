@@ -8,13 +8,55 @@ Cloudflare app to automatically track API requests and send to Moesif for API de
 [Source Code on GitHub](https://github.com/moesif/moesif-cloudflare)
 
 
-## How to install
+## Install via Cloudflare App
+
+`moesif-cloudflare` is currently under review. We'll update this as soon as the app can be used.
+
+## Install via Cloudflare Dashboard
+
+This option provides the most flexibility, allowing you to write custom logic to identify users, session tokens, etc per request.
+
+- Visit the [Cloudfront Worker Dashboard](https://dash.cloudflare.com/workers). *(make sure you're looking at the Workers tab)*
+- Click the `Launch editor` button
+- Click the `Routes` tab and create a route under `Script enabled at:`. We suggest a pattern that matches all requests for your domain. Eg: If your domain is `foo.com`, **your pattern should be** `*foo.com/*`. This will match all requests to `foo.com` and any subdomains of `foo.com`.
+- Click the `Script` tab, and replace the editor content with the latest version of the [Moesif Cloudflare worker](https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/MoesifWorker.js).
+- replace any instances of the `INSTALL_OPTIONS` variable with desired values.
+
+For example:
+
+```javascript
+const applicationId = INSTALL_OPTIONS.appId;
+const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards;
+const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader;
+const userIdHeader = INSTALL_OPTIONS.userIdHeader;
+```
+
+becomes
+
+```javascript
+const applicationId = '<<< YOUR MOESIF APPLICATION ID >>>';
+const HIDE_CREDIT_CARDS = true;
+const sessionTokenHeader = 'Authorization';
+const userIdHeader = null;
+```
+
+*Please note `HIDE_CREDIT_CARDS`, `sessionTokenHeader`, and `userIdHeader` may be `null`.*
+
+- click `Update Preview` to see changes in the preview window, and click `Deploy` to deploy the worker to production
+
+Congratulations! If everything was done corectly, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
+
+### Advanced Configuration
+
+Moesif provides the most value when we can identify users. You may also want to specify metadata, mask certain data, or prevent tracking of certain requests entirely. This is possible with the hooks below.
+
+To change the behavior of one of these hooks, replace the contents of that function in the Cloudflare Worker with the desired code.
 
 
-## How to use
 
+## Other Installation Options
 
-## Configuration options
+See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for more alternatives for setting up Cloudflare workers.
 
 
 #### __`identifyUser`__
@@ -25,11 +67,11 @@ and returns a userId. This helps us attribute requests to unique users. Even tho
 automatically retrieve the userId without this, this is highly recommended to ensure accurate attribution.
 
 
-```
-options.identifyUser = function (req, res) {
+```javascript
+const identifyUser = (req, res) => {
   // your code here, must return a string
   return req.user.id
-}
+};
 ```
 
 #### __`getSessionToken`__
@@ -39,10 +81,10 @@ getSessionToken a function that takes `req` and `res` arguments and returns a se
 
 
 ```javascript
-options.getSessionToken = function (req, res) {
+const getSessionToken = (req, res) => {
   // your code here, must return a string.
-  return req.headers['Authorization'];
-}
+  return req.headers.get('Authorization');
+};
 ```
 
 #### __`getApiVersion`__
@@ -52,10 +94,10 @@ getApiVersion is a function that takes a `req` and `res` arguments and returns a
 
 
 ```javascript
-options.getApiVersion = function (req, res) {
+const getApiVersion = (req, res) => {
   // your code here. must return a string.
   return '1.0.5'
-}
+};
 ```
 
 #### __`getMetadata`__
@@ -66,13 +108,13 @@ to add custom metadata that will be associated with the req. The metadata must b
 
 
 ```javascript
-options.getMetadata = function (req, res) {
+const getMetadata = (req, res) => {
   // your code here:
   return {
     foo: 'custom data',
     bar: 'another custom data'
   };
-}
+};
 ```
 
 #### __`skip`__
@@ -83,14 +125,14 @@ skip is a function that takes a `req` and `res` arguments and returns true if th
 
 
 ```javascript
-options.skip = function (req, res) {
+const skip = (req, res) => {
   // your code here. must return a boolean.
   if (req.path === '/') {
     // Skip probes to home page.
     return true;
   }
   return false
-}
+};
 ```
 
 #### __`maskContent`__
@@ -101,9 +143,9 @@ With maskContent, you can make modifications to the headers or body such as remo
 
 
 ```javascript
-options.maskContent = function(event) {
+const maskContent = moesifEvent => {
   // remove any field that you don't want to be sent to Moesif.
-  return event;
+  return moesifEvent;
 }
  ```
 
