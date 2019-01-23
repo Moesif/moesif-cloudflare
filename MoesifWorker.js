@@ -4,10 +4,20 @@
 // Please update the `applicationId` as well as any hooks
 // you'd like to use (eg: identifyUser, getSessionToken, etc)
 
-const applicationId = INSTALL_OPTIONS.appId;
-const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards;
-const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader;
-const userIdHeader = INSTALL_OPTIONS.userIdHeader;
+const applicationId = INSTALL_OPTIONS.appId; // your moesif APP id
+const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards; // true or false
+const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader; // only used by default getSessionToken() implementation
+const userIdHeader = INSTALL_OPTIONS.userIdHeader; // only used by default identifyUser() implementation
+
+const overrideApplicationId = moesifEvent => {
+  // you may want to use a different app ID based on the request being made
+  // eg:
+  // return moesifEvent.request.uri.startsWith('https://stg.foo.com')
+  //   ? '<< MOESIF APP ID FOR STAGING APP >>'
+  //   : '<< MOESIF APP ID FOR PROD APP >>';
+  
+  return applicationId;
+};
 
 const identifyUser = (req, res) => {
   return req.headers.get(userIdHeader) || res.headers.get(userIdHeader);
@@ -43,7 +53,7 @@ const BATCH_DURATION = 5000; // ms
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
 let batchRunning = false;
 
-let moesifEvents = [];
+let jobs = [];
 
 function isMoesif(request) {
   return request.url.indexOf('https://api.moesif.net') !== -1;
@@ -204,27 +214,43 @@ async function handleBatch() {
 
     await sleep(BATCH_DURATION);
 
-    if (moesifEvents.length) await batch();
+    if (jobs.length) await batch();
 
     batchRunning = false;
   }
 }
 
 function batch() {
-  if (moesifEvents.length > 0) {
-    const options = {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json; charset=utf-8',
-        'X-Moesif-Application-Id': applicationId,
-        'User-Agent': 'moesif-cloudfront'
-      },
-      body: JSON.stringify(moesifEvents)
-    };
+  if (jobs.length > 0) {
+    const appIdMap = {};
 
-    moesifEvents = [];
+    jobs.forEach(({ applicationId, moesifEvent }) => {
+      if (!(applicationId in appIdMap)) {
+        appIdMap[applicationId] = [];
+      }
 
-    return fetch(BATCH_URL, options);
+      appIdMap[applicationId].push(moesifEvent);
+    });
+
+    let promises = [];
+
+    Object.keys(appIdMap).forEach(applicationId => {
+      const options = {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json; charset=utf-8',
+          'X-Moesif-Application-Id': applicationId,
+          'User-Agent': 'moesif-cloudfront'
+        },
+        body: JSON.stringify(appIdMap[applicationId])
+      };
+
+      promises.push(fetch(BATCH_URL, options));
+    });
+    
+    jobs = [];
+
+    return Promise.all(promises);
   }
 }
 
@@ -232,9 +258,12 @@ async function tryTrackRequest(event, request, response, before, after) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
     const moesifEvent = await makeMoesifEvent(request, response, before, after);
 
-    moesifEvents.push(moesifEvent);
+    jobs.push({
+      applicationId: runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, applicationId),
+      moesifEvent
+    });
 
-    if (moesifEvents.length >= MAX_REQUESTS_PER_BATCH) {
+    if (jobs.length >= MAX_REQUESTS_PER_BATCH) {
       // let's send everything right now
       event.waitUntil(batch());
     } else if (!batchRunning) {
