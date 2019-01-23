@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json.schemastore.org/install",
+  "workers": [
+    {
+      "src": "./MoesifWorker.js"
+    }
+  ],
+  "options": {
+    "properties": {
+      "appId": {
+        "title": "Moesif App Id (required)",
+        "type": "string",
+        "default": ""
+      },
+      "userIdHeader": {
+        "title": "Request / Response Header Containing User ID (optional)",
+        "type": "string",
+        "default": ""
+      },
+      "sessionTokenHeader": {
+        "title": "Request / Response Header Containing Session Token (optional)",
+        "type": "string",
+        "default": ""
+      },
+      "hideCreditCards": {
+        "title": "Remove Credit Card Numbers from API Requests. Leave this enabled if your API processes credit card information.",
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}
