@@ -156,8 +156,7 @@ options.maskContent = function(event) {
     }
   },
   "user_id": "mndug437f43",
-  "session_token":"end_user_session_token",
-  "tags": "tag1, tag2"
+  "session_token":"end_user_session_token"
 }
 
 ```

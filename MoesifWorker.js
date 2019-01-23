@@ -10,11 +10,11 @@ const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader;
 const userIdHeader = INSTALL_OPTIONS.userIdHeader;
 
 const identifyUser = (req, res) => {
-  return req.headers[userIdHeader] || res.headers[userIdHeader];
+  return req.headers.get(userIdHeader) || res.headers.get(userIdHeader);
 };
 
 const getSessionToken = (req, res) => {
-  return req.headers[sessionTokenHeader] || res.headers[sessionTokenHeader];
+  return req.headers.get(sessionTokenHeader) || res.headers.get(sessionTokenHeader);
 };
 
 const getApiVersion = (req, res) => {
@@ -179,14 +179,15 @@ async function makeMoesifEvent(request, response, before, after) {
       uri: request.url,
       verb: request.method,
       headers: headersToObject(request.headers),
-      ip_address: '127.0.0.1'
+      ip_address: request.headers.get('cf-connecting-ip')
     },
     response: {
       time: after,
       body: hideCreditCards(responseBody),
       status: response.status,
-      headers: headersToObject(response.headers),
-      // transfer_encoding:
+      headers: headersToObject(response.headers)
+      // ip_address is not permitted through cloudfront at this time
+      // https://community.cloudflare.com/t/allow-direct-ip-access-from-workers-and-all-headers-with-fetch/48240/2
     }
   };
 
