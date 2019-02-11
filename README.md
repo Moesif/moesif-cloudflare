@@ -3,14 +3,14 @@
 [![Software License][ico-license]][link-license]
 [![Source Code][ico-source]][link-source]
 
-Cloudflare app to automatically track API requests and send to Moesif for API debugging and analytics.
+[Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) automatically tracks API requests and send to Moesif for API debugging and analytics.
 
 [Source Code on GitHub](https://github.com/moesif/moesif-cloudflare)
 
 
 ## Install via Cloudflare App
 
-`moesif-cloudflare` is currently under review. We'll update this as soon as the app can be used.
+Go to the [Moesif app](https://www.cloudflare.com/apps/moesif) on Cloudflare's App Marketplace and click _Preview_
 
 ## Install via Cloudflare Dashboard
 
