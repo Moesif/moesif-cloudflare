@@ -8,21 +8,25 @@
   "options": {
     "properties": {
       "appId": {
+        "order": 1,
         "title": "Moesif App Id (required)",
         "type": "string",
         "default": ""
       },
       "userIdHeader": {
+        "order": 2,
         "title": "Request / Response Header Containing User ID (optional)",
         "type": "string",
         "default": ""
       },
       "sessionTokenHeader": {
+        "order": 3,
         "title": "Request / Response Header Containing Session Token (optional)",
         "type": "string",
         "default": ""
       },
       "hideCreditCards": {
+        "order": 4,
         "title": "Remove Credit Card Numbers from API Requests. Leave this enabled if your API processes credit card information.",
         "type": "boolean",
         "default": true
