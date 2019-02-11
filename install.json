@@ -9,19 +9,22 @@
     "properties": {
       "appId": {
         "order": 1,
-        "title": "Moesif App Id (required)",
+        "title": "Default Moesif App Id",
+        "description": "Requred, unless \"App Id Overrides\" are used",
         "type": "string",
         "default": ""
       },
       "userIdHeader": {
         "order": 2,
-        "title": "Request / Response Header Containing User ID (optional)",
+        "title": "Request / Response Header Containing User ID",
+        "description": "Optional",
         "type": "string",
         "default": ""
       },
       "sessionTokenHeader": {
         "order": 3,
-        "title": "Request / Response Header Containing Session Token (optional)",
+        "title": "Request / Response Header Containing Session Token",
+        "description": "Optional",
         "type": "string",
         "default": ""
       },
@@ -30,6 +33,30 @@
         "title": "Remove Credit Card Numbers from API Requests. Leave this enabled if your API processes credit card information.",
         "type": "boolean",
         "default": true
+      },
+      "urlPatterns": {
+        "order": 5,
+        "title": "App Id Overrides",
+        "description": "Advanced usage. For assistance with advanced configuration, please contact support@moesif.com. To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
+        "type": "array",
+        "items": {
+          "title": "Item",
+          "type": "object",
+          "properties": {
+            "text": {
+              "order": 1,
+              "title": "URL Regex",
+              "placeholder": "^https://mydomain.com/api",
+              "type": "string"
+            },
+            "size": {
+              "order": 2,
+              "title": "Moesif App Id for Requests with URLs Matching Above Regular Expression",
+              "placeholder": "leave blank to ignore requests matching this pattern",
+              "type": "string"
+            }
+          }
+        }
       }
     }
   }
