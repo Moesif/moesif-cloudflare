@@ -43,13 +43,13 @@
           "title": "Item",
           "type": "object",
           "properties": {
-            "text": {
+            "regex": {
               "order": 1,
               "title": "URL Regex",
               "placeholder": "^https://mydomain.com/api",
               "type": "string"
             },
-            "size": {
+            "appId": {
               "order": 2,
               "title": "Moesif App Id for Requests with URLs Matching Above Regular Expression",
               "placeholder": "leave blank to ignore requests matching this pattern",
