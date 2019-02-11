@@ -37,7 +37,7 @@
       "urlPatterns": {
         "order": 5,
         "title": "App Id Overrides",
-        "description": "Advanced usage. For assistance with advanced configuration, please contact support@moesif.com. To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
+        "description": "Advanced usage. For assistance with advanced configuration, please contact support@moesif.com. Regular expressions are evaluated in order (top to bottom), and the appId for the first matching regex will be used for a given request. To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
         "type": "array",
         "items": {
           "title": "Item",
