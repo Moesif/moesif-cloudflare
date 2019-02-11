@@ -4,11 +4,11 @@
 // Please update the `applicationId` as well as any hooks
 // you'd like to use (eg: identifyUser, getSessionToken, etc)
 
-const applicationId = INSTALL_OPTIONS.appId; // your moesif APP id
+const defaultApplicationId = INSTALL_OPTIONS.appId; // your moesif APP id
 const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards; // true or false
 const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader; // only used by default getSessionToken() implementation
 const userIdHeader = INSTALL_OPTIONS.userIdHeader; // only used by default identifyUser() implementation
-const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(([regex, appId]) => {
+const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
   try {
     return {
       regex: new RegExp(regex),
@@ -25,8 +25,8 @@ const overrideApplicationId = moesifEvent => {
   const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
 
   return pattern
-    ? pattern.appId
-    : applicationId;
+    ? pattern.appId // may be an empty string, which means don't track this
+    : defaultApplicationId;
 };
 
 const identifyUser = (req, res) => {
@@ -267,7 +267,7 @@ function batch() {
 async function tryTrackRequest(event, request, response, before, after) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
     const moesifEvent = await makeMoesifEvent(request, response, before, after);
-    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, applicationId);
+    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, defaultApplicationId);
 
     if (applicationId) {
       // only track this if there's an associated applicationId
