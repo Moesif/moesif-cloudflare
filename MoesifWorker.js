@@ -4,19 +4,29 @@
 // Please update the `applicationId` as well as any hooks
 // you'd like to use (eg: identifyUser, getSessionToken, etc)
 
-const applicationId = INSTALL_OPTIONS.appId; // your moesif APP id
+const defaultApplicationId = INSTALL_OPTIONS.appId; // your moesif APP id
 const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards; // true or false
 const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader; // only used by default getSessionToken() implementation
 const userIdHeader = INSTALL_OPTIONS.userIdHeader; // only used by default identifyUser() implementation
+const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
+  try {
+    return {
+      regex: new RegExp(regex),
+      appId
+    };
+  } catch (e) {
+    console.error(e);
+  }
+}).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
+
 
 const overrideApplicationId = moesifEvent => {
   // you may want to use a different app ID based on the request being made
-  // eg:
-  // return moesifEvent.request.uri.startsWith('https://stg.foo.com')
-  //   ? '<< MOESIF APP ID FOR STAGING APP >>'
-  //   : '<< MOESIF APP ID FOR PROD APP >>';
-  
-  return applicationId;
+  const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
+
+  return pattern
+    ? pattern.appId // may be an empty string, which means don't track this
+    : defaultApplicationId;
 };
 
 const identifyUser = (req, res) => {
@@ -71,8 +81,8 @@ function runHook(fn, name, defaultValue) {
   try {
     result = fn();
   } catch (e) {
-    console.log(`Error running ${name} hook.`);
-    console.log(e);
+    console.error(`Error running ${name} hook.`);
+    console.error(e);
   }
 
   if (result === undefined || result === null) {
@@ -257,22 +267,28 @@ function batch() {
 async function tryTrackRequest(event, request, response, before, after) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
     const moesifEvent = await makeMoesifEvent(request, response, before, after);
+    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, defaultApplicationId);
 
-    jobs.push({
-      applicationId: runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, applicationId),
-      moesifEvent
-    });
+    if (applicationId) {
+      // only track this if there's an associated applicationId
+      // services may want to not report certain requests
 
-    if (jobs.length >= MAX_REQUESTS_PER_BATCH) {
-      // let's send everything right now
-      event.waitUntil(batch());
-    } else if (!batchRunning) {
-      // wait until the next batch job
-      // event.waitUntil(sleep(BATCH_DURATION));
-      event.waitUntil(handleBatch());
-    } else {
-      // a batch job is already running and keeping this worker awake
-      // we don't need to wait
+      jobs.push({
+        applicationId,
+        moesifEvent
+      });
+
+      if (jobs.length >= MAX_REQUESTS_PER_BATCH) {
+        // let's send everything right now
+        event.waitUntil(batch());
+      } else if (!batchRunning) {
+        // wait until the next batch job
+        // event.waitUntil(sleep(BATCH_DURATION));
+        event.waitUntil(handleBatch());
+      } else {
+        // a batch job is already running and keeping this worker awake
+        // we don't need to wait
+      }
     }
   }
 }
