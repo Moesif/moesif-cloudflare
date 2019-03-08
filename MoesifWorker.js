@@ -59,6 +59,7 @@ const maskContent = moesifEvent => {
 
 const MAX_REQUESTS_PER_BATCH = 15;
 const BATCH_DURATION = 5000; // ms
+const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
 
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
 let batchRunning = false;
@@ -157,6 +158,32 @@ function luhnCheck(trimmed) {
   return (total !== 0 && (total % 10) === 0);
 }
 
+function uuid4() {
+  // https://gist.github.com/kaizhu256/4482069
+  // return uuid of form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  var uuid = '', ii;
+  for (ii = 0; ii < 32; ii += 1) {
+    switch (ii) {
+    case 8:
+    case 20:
+      uuid += '-';
+      uuid += (Math.random() * 16 | 0).toString(16);
+      break;
+    case 12:
+      uuid += '-';
+      uuid += '4';
+      break;
+    case 16:
+      uuid += '-';
+      uuid += (Math.random() * 4 | 8).toString(16);
+      break;
+    default:
+      uuid += (Math.random() * 16 | 0).toString(16);
+    }
+  }
+  return uuid;
+}
+
 async function makeMoesifEvent(request, response, before, after) {
   const [
     requestBody,
@@ -168,6 +195,7 @@ async function makeMoesifEvent(request, response, before, after) {
     // let's clone `response`
     response.clone().text()
   ]);
+  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
   const moesifEvent = {
     userId: runHook(
@@ -198,14 +226,20 @@ async function makeMoesifEvent(request, response, before, after) {
       time: before,
       uri: request.url,
       verb: request.method,
-      headers: headersToObject(request.headers),
+      headers: {
+        ...headersToObject(request.headers),
+        [TRANSACTION_ID_HEADER]: txId
+      },
       ip_address: request.headers.get('cf-connecting-ip')
     },
     response: {
       time: after,
       body: hideCreditCards(responseBody),
       status: response.status,
-      headers: headersToObject(response.headers)
+      headers: {
+        ...headersToObject(response.headers),
+        [TRANSACTION_ID_HEADER]: txId
+      }
       // ip_address is not permitted through cloudfront at this time
       // https://community.cloudflare.com/t/allow-direct-ip-access-from-workers-and-all-headers-with-fetch/48240/2
     }
