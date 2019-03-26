@@ -21,13 +21,6 @@
         "type": "string",
         "default": ""
       },
-      "userSessionTokenHeader": {
-        "order": 30,
-        "title": "Request / Response Header Containing Session Token to identify User",
-        "description": "Optional",
-        "type": "string",
-        "default": ""
-      },
       "companyIdHeader": {
         "order": 40,
         "title": "Request / Response Header to Identify Company",
@@ -35,9 +28,9 @@
         "type": "string",
         "default": ""
       },
-      "companySessionTokenHeader": {
+      "sessionTokenHeader": {
         "order": 50,
-        "title": "Request / Response Header Containing Session Token to identify Company",
+        "title": "Request / Response Header Containing Session Token",
         "description": "Optional",
         "type": "string",
         "default": ""
