@@ -24,13 +24,17 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     "sessionTokenHeader": "",
 
     // true or false
-    "hideCreditCards": true
+    "hideCreditCards": true,
+
+    // set to true to prevent insertion of X-Moesif-Transaction-Id
+    "disableTransactionId": false
   };
 }
 
 let {
   appId,
   hideCreditCards,
+  disableTransactionId,
   sessionTokenHeader,
   userIdHeader,
   companyIdHeader,
@@ -220,7 +224,7 @@ function uuid4() {
   return uuid;
 }
 
-async function makeMoesifEvent(request, response, before, after) {
+async function makeMoesifEvent(request, response, before, after, txId) {
   const [
     requestBody,
     responseBody
@@ -231,8 +235,6 @@ async function makeMoesifEvent(request, response, before, after) {
     // let's clone `response`
     response.clone().text()
   ]);
-  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
-
   const moesifEvent = {
     userId: runHook(
       () => identifyUser(request, response),
@@ -268,24 +270,23 @@ async function makeMoesifEvent(request, response, before, after) {
       time: before,
       uri: request.url,
       verb: request.method,
-      headers: {
-        ...headersToObject(request.headers),
-        [TRANSACTION_ID_HEADER]: txId
-      },
+      headers: headersToObject(request.headers),
       ip_address: request.headers.get('cf-connecting-ip')
     },
     response: {
       time: after,
       body: doHideCreditCards(responseBody),
       status: response.status,
-      headers: {
-        ...headersToObject(response.headers),
-        [TRANSACTION_ID_HEADER]: txId
-      }
+      headers: headersToObject(response.headers)
       // ip_address is not permitted through cloudfront at this time
       // https://community.cloudflare.com/t/allow-direct-ip-access-from-workers-and-all-headers-with-fetch/48240/2
     }
   };
+
+  if (!disableTransactionId) {
+    moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
+    moesifEvent.response.headers[TRANSACTION_ID_HEADER] = txId;
+  }
 
   return runHook(
     () => maskContent(moesifEvent),
@@ -340,9 +341,9 @@ function batch() {
   }
 }
 
-async function tryTrackRequest(event, request, response, before, after) {
+async function tryTrackRequest(event, request, response, before, after, txId) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
-    const moesifEvent = await makeMoesifEvent(request, response, before, after);
+    const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
     const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, appId);
 
     if (applicationId) {
@@ -376,10 +377,29 @@ async function handleRequest(event) {
   // when we inspect the request body later
   const response = await fetch(request.clone());
   const after = new Date();
+  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
-  event.waitUntil(tryTrackRequest(event, request, response, before, after));
+  event.waitUntil(
+    tryTrackRequest(
+      event,
+      request,
+      response,
+      before,
+      after,
+      txId
+    )
+  );
 
-  return response;
+  if (!disableTransactionId) {
+    const responseClone = new Response(response.body, response);
+
+    responseClone.headers.set('x-my-header', 'custom value')
+    responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
+
+    return responseClone;
+  } else {
+    return response;
+  }
 }
 
 addEventListener('fetch', event => {

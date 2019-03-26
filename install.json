@@ -41,6 +41,13 @@
         "type": "boolean",
         "default": true
       },
+      "disableTransactionId": {
+        "order": 65,
+        "title": "Disable Transaction Id generation",
+        "description": "Setting to true will prevent insertion of the <code>X-Moesif-Transaction-Id</code> header.",
+        "type": "boolean",
+        "default": false
+      },
       "urlPatterns": {
         "order": 70,
         "title": "App Id Overrides",
