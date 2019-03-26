@@ -26,7 +26,6 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     // true or false
     "hideCreditCards": true
   };
-
 }
 
 let {

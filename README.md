@@ -21,23 +21,48 @@ This option provides the most flexibility, allowing you to write custom logic to
 - Click the `Routes` tab and create a route under `Script enabled at:`. We suggest a pattern that matches all requests for your domain. Eg: If your domain is `foo.com`, **your pattern should be** `*foo.com/*`. This will match all requests to `foo.com` and any subdomains of `foo.com`.
 - Click the `Script` tab, and replace the editor content with the latest version of the [Moesif Cloudflare worker](https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/MoesifWorker.js).
 - replace any instances of the `INSTALL_OPTIONS` variable with desired values.
+- update the `INSTALL_OPTIONS` declaration with the desired values.
 
 For example:
 
 ```javascript
-const applicationId = INSTALL_OPTIONS.appId;
-const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards;
-const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader;
-const userIdHeader = INSTALL_OPTIONS.userIdHeader;
+INSTALL_OPTIONS = {
+  // your moesif App Id
+  "appId": "",
+
+  // only used by default identifyUser() implementation
+  "userIdHeader": "",
+
+  // only used by default identifyUser() implementation
+  "companyIdHeader": "",
+
+  // only used by default getSessionToken() implementation
+  "sessionTokenHeader": "",
+
+  // true or false
+  "hideCreditCards": true
+};
 ```
 
 becomes
 
 ```javascript
-const applicationId = '<< YOUR MOESIF APPLICATION ID >>';
-const HIDE_CREDIT_CARDS = true;
-const sessionTokenHeader = 'Authorization';
-const userIdHeader = null;
+INSTALL_OPTIONS = {
+  // your moesif App Id
+  "appId": "<< YOUR MOESIF APPLICATION ID >>",
+
+  // only used by default identifyUser() implementation
+  "userIdHeader": "User-Id",
+
+  // only used by default identifyUser() implementation
+  "companyIdHeader": "",
+
+  // only used by default getSessionToken() implementation
+  "sessionTokenHeader": "Authorization",
+
+  // true or false
+  "hideCreditCards": false
+};
 ```
 
 *Please note `HIDE_CREDIT_CARDS`, `sessionTokenHeader`, and `userIdHeader` may be `null`.*
