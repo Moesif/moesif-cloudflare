@@ -4,11 +4,46 @@
 // Please update the `applicationId` as well as any hooks
 // you'd like to use (eg: identifyUser, getSessionToken, etc)
 
-const defaultApplicationId = INSTALL_OPTIONS.appId; // your moesif APP id
-const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards; // true or false
-const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader; // only used by default getSessionToken() implementation
-const userIdHeader = INSTALL_OPTIONS.userIdHeader; // only used by default identifyUser() implementation
-const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
+// this value is defined by the Cloudflare App Worker framework
+var INSTALL_OPTIONS;
+
+if (typeof INSTALL_OPTIONS === 'undefined') {
+  // only for manual installation (not installed via Cloudflare Apps)
+
+  INSTALL_OPTIONS = {
+    // your moesif App Id
+    "appId": "",
+
+    // only used by default identifyUser() implementation
+    "userIdHeader": "",
+
+    // only used by default getSessionToken() implementation
+    "userSessionTokenHeader": "",
+
+    // only used by default identifyUser() implementation
+    "companyIdHeader": "",
+
+    // only used by default getSessionToken() implementation
+    "companySessionTokenHeader": "",
+
+    // true or false
+    "hideCreditCards": true
+  };
+
+}
+
+// TODO: remove
+console.log(INSTALL_OPTIONS);
+
+let {
+  appId,
+  hideCreditCards,
+  userSessionTokenHeader,
+  userIdHeader,
+  urlPatterns = []
+} = INSTALL_OPTIONS;
+
+urlPatterns = urlPatterns.map(({ appId, regex }) => {
   try {
     return {
       regex: new RegExp(regex),
@@ -19,6 +54,9 @@ const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
   }
 }).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
 
+if (!appId && urlPatterns.length === 0) {
+  console.error('Cannot track events. No App ID or valid URL Pattern specified.');
+}
 
 const overrideApplicationId = moesifEvent => {
   // you may want to use a different app ID based on the request being made
@@ -26,7 +64,7 @@ const overrideApplicationId = moesifEvent => {
 
   return pattern
     ? pattern.appId // may be an empty string, which means don't track this
-    : defaultApplicationId;
+    : appId;
 };
 
 const identifyUser = (req, res) => {
@@ -34,7 +72,7 @@ const identifyUser = (req, res) => {
 };
 
 const getSessionToken = (req, res) => {
-  return req.headers.get(sessionTokenHeader) || res.headers.get(sessionTokenHeader);
+  return req.headers.get(userSessionTokenHeader) || res.headers.get(userSessionTokenHeader);
 };
 
 const getApiVersion = (req, res) => {
@@ -108,7 +146,7 @@ function headersToObject(headers) {
  * Perform a luhn check to reduce some false positives
  */
 function hideCreditCards(text) {
-  if (HIDE_CREDIT_CARDS) {
+  if (hideCreditCards) {
     return text.replace(/[0-9]{14,19}/g, (match) => {
       return luhnCheck(match)
         ? '<<POTENTIAL CREDIT CARD REDACTED>>'
@@ -301,7 +339,7 @@ function batch() {
 async function tryTrackRequest(event, request, response, before, after) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
     const moesifEvent = await makeMoesifEvent(request, response, before, after);
-    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, defaultApplicationId);
+    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, appId);
 
     if (applicationId) {
       // only track this if there's an associated applicationId
