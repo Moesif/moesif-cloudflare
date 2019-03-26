@@ -17,14 +17,11 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     // only used by default identifyUser() implementation
     "userIdHeader": "",
 
-    // only used by default getSessionToken() implementation
-    "userSessionTokenHeader": "",
-
     // only used by default identifyUser() implementation
     "companyIdHeader": "",
 
     // only used by default getSessionToken() implementation
-    "companySessionTokenHeader": "",
+    "sessionTokenHeader": "",
 
     // true or false
     "hideCreditCards": true
@@ -38,7 +35,7 @@ console.log(INSTALL_OPTIONS);
 let {
   appId,
   hideCreditCards,
-  userSessionTokenHeader,
+  sessionTokenHeader,
   userIdHeader,
   urlPatterns = []
 } = INSTALL_OPTIONS;
@@ -71,21 +68,25 @@ const identifyUser = (req, res) => {
   return req.headers.get(userIdHeader) || res.headers.get(userIdHeader);
 };
 
+const identifyCompany = (req, res) => {
+  return req.headers.get(companyIdHeader) || res.headers.get(companyIdHeader);
+};
+
 const getSessionToken = (req, res) => {
-  return req.headers.get(userSessionTokenHeader) || res.headers.get(userSessionTokenHeader);
+  return req.headers.get(sessionTokenHeader) || res.headers.get(sessionTokenHeader);
 };
 
 const getApiVersion = (req, res) => {
   return undefined;
-}
+};
 
 const getMetadata = (req, res) => {
   return undefined;
-}
+};
 
 const skip = (req, res) => {
   return false;
-}
+};
 
 const maskContent = moesifEvent => {
   return moesifEvent;
@@ -239,6 +240,12 @@ async function makeMoesifEvent(request, response, before, after) {
     userId: runHook(
       () => identifyUser(request, response),
       identifyUser.name,
+      undefined
+    ),
+
+    companyId: runHook(
+      () => identifyCompany(request, response),
+      identifyCompany.name,
       undefined
     ),
 
