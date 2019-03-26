@@ -37,6 +37,7 @@ let {
   hideCreditCards,
   sessionTokenHeader,
   userIdHeader,
+  companyIdHeader,
   urlPatterns = []
 } = INSTALL_OPTIONS;
 
@@ -279,7 +280,7 @@ async function makeMoesifEvent(request, response, before, after) {
     },
     response: {
       time: after,
-      body: hideCreditCards(responseBody),
+      body: doHideCreditCards(responseBody),
       status: response.status,
       headers: {
         ...headersToObject(response.headers),
