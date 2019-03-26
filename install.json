@@ -8,36 +8,50 @@
   "options": {
     "properties": {
       "appId": {
-        "order": 1,
+        "order": 10,
         "title": "Default Moesif App Id",
         "description": "Requred, unless \"App Id Overrides\" are used",
         "type": "string",
         "default": ""
       },
       "userIdHeader": {
-        "order": 2,
-        "title": "Request / Response Header Containing User ID",
+        "order": 20,
+        "title": "Request / Response Header to Identify User",
+        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/users/'>User Profiles</a> and <a href='https://www.moesif.com/docs/getting-started/companies/'>Company Profiles</a>.",
+        "type": "string",
+        "default": ""
+      },
+      "companyIdHeader": {
+        "order": 40,
+        "title": "Request / Response Header to Identify Company",
         "description": "Optional",
         "type": "string",
         "default": ""
       },
       "sessionTokenHeader": {
-        "order": 3,
+        "order": 50,
         "title": "Request / Response Header Containing Session Token",
         "description": "Optional",
         "type": "string",
         "default": ""
       },
       "hideCreditCards": {
-        "order": 4,
+        "order": 60,
         "title": "Remove Credit Card Numbers from API Requests. Leave this enabled if your API processes credit card information.",
         "type": "boolean",
         "default": true
       },
+      "disableTransactionId": {
+        "order": 65,
+        "title": "Disable Transaction Id generation",
+        "description": "Setting to true will prevent insertion of the <code>X-Moesif-Transaction-Id</code> header.",
+        "type": "boolean",
+        "default": false
+      },
       "urlPatterns": {
-        "order": 5,
+        "order": 70,
         "title": "App Id Overrides",
-        "description": "Advanced usage. For assistance with advanced configuration, please contact support@moesif.com. Regular expressions are evaluated in order (top to bottom), and the appId for the first matching regex will be used for a given request. To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
+        "description": "Advanced usage.<br>For assistance with advanced configuration, please contact <a href='mailto:support@moesif.com'>support@moesif.com</a>. Regular expressions are evaluated in order (top to bottom), and the appId for the first matching regex will be used for a given request. <br> To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
         "type": "array",
         "items": {
           "title": "Item",

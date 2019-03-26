@@ -4,11 +4,44 @@
 // Please update the `applicationId` as well as any hooks
 // you'd like to use (eg: identifyUser, getSessionToken, etc)
 
-const defaultApplicationId = INSTALL_OPTIONS.appId; // your moesif APP id
-const HIDE_CREDIT_CARDS = INSTALL_OPTIONS.hideCreditCards; // true or false
-const sessionTokenHeader = INSTALL_OPTIONS.sessionTokenHeader; // only used by default getSessionToken() implementation
-const userIdHeader = INSTALL_OPTIONS.userIdHeader; // only used by default identifyUser() implementation
-const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
+// this value is defined by the Cloudflare App Worker framework
+var INSTALL_OPTIONS;
+
+if (typeof INSTALL_OPTIONS === 'undefined') {
+  // only for manual installation (not installed via Cloudflare Apps)
+
+  INSTALL_OPTIONS = {
+    // your moesif App Id
+    "appId": "",
+
+    // only used by default identifyUser() implementation
+    "userIdHeader": "",
+
+    // only used by default identifyUser() implementation
+    "companyIdHeader": "",
+
+    // only used by default getSessionToken() implementation
+    "sessionTokenHeader": "",
+
+    // true or false
+    "hideCreditCards": true,
+
+    // set to true to prevent insertion of X-Moesif-Transaction-Id
+    "disableTransactionId": false
+  };
+}
+
+let {
+  appId,
+  hideCreditCards,
+  disableTransactionId,
+  sessionTokenHeader,
+  userIdHeader,
+  companyIdHeader,
+  urlPatterns = []
+} = INSTALL_OPTIONS;
+
+urlPatterns = urlPatterns.map(({ appId, regex }) => {
   try {
     return {
       regex: new RegExp(regex),
@@ -19,6 +52,9 @@ const urlPatterns = INSTALL_OPTIONS.urlPatterns.map(({ appId, regex }) => {
   }
 }).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
 
+if (!appId && urlPatterns.length === 0) {
+  console.error('Cannot track events. No App ID or valid URL Pattern specified.');
+}
 
 const overrideApplicationId = moesifEvent => {
   // you may want to use a different app ID based on the request being made
@@ -26,11 +62,15 @@ const overrideApplicationId = moesifEvent => {
 
   return pattern
     ? pattern.appId // may be an empty string, which means don't track this
-    : defaultApplicationId;
+    : appId;
 };
 
 const identifyUser = (req, res) => {
   return req.headers.get(userIdHeader) || res.headers.get(userIdHeader);
+};
+
+const identifyCompany = (req, res) => {
+  return req.headers.get(companyIdHeader) || res.headers.get(companyIdHeader);
 };
 
 const getSessionToken = (req, res) => {
@@ -39,15 +79,15 @@ const getSessionToken = (req, res) => {
 
 const getApiVersion = (req, res) => {
   return undefined;
-}
+};
 
 const getMetadata = (req, res) => {
   return undefined;
-}
+};
 
 const skip = (req, res) => {
   return false;
-}
+};
 
 const maskContent = moesifEvent => {
   return moesifEvent;
@@ -107,8 +147,8 @@ function headersToObject(headers) {
  * Hide anything that looks like a credit card
  * Perform a luhn check to reduce some false positives
  */
-function hideCreditCards(text) {
-  if (HIDE_CREDIT_CARDS) {
+function doHideCreditCards(text) {
+  if (hideCreditCards) {
     return text.replace(/[0-9]{14,19}/g, (match) => {
       return luhnCheck(match)
         ? '<<POTENTIAL CREDIT CARD REDACTED>>'
@@ -184,7 +224,7 @@ function uuid4() {
   return uuid;
 }
 
-async function makeMoesifEvent(request, response, before, after) {
+async function makeMoesifEvent(request, response, before, after, txId) {
   const [
     requestBody,
     responseBody
@@ -195,12 +235,16 @@ async function makeMoesifEvent(request, response, before, after) {
     // let's clone `response`
     response.clone().text()
   ]);
-  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
-
   const moesifEvent = {
     userId: runHook(
       () => identifyUser(request, response),
       identifyUser.name,
+      undefined
+    ),
+
+    companyId: runHook(
+      () => identifyCompany(request, response),
+      identifyCompany.name,
       undefined
     ),
 
@@ -222,28 +266,27 @@ async function makeMoesifEvent(request, response, before, after) {
         getApiVersion.name,
         undefined
       ),
-      body: hideCreditCards(requestBody),
+      body: doHideCreditCards(requestBody),
       time: before,
       uri: request.url,
       verb: request.method,
-      headers: {
-        ...headersToObject(request.headers),
-        [TRANSACTION_ID_HEADER]: txId
-      },
+      headers: headersToObject(request.headers),
       ip_address: request.headers.get('cf-connecting-ip')
     },
     response: {
       time: after,
-      body: hideCreditCards(responseBody),
+      body: doHideCreditCards(responseBody),
       status: response.status,
-      headers: {
-        ...headersToObject(response.headers),
-        [TRANSACTION_ID_HEADER]: txId
-      }
+      headers: headersToObject(response.headers)
       // ip_address is not permitted through cloudfront at this time
       // https://community.cloudflare.com/t/allow-direct-ip-access-from-workers-and-all-headers-with-fetch/48240/2
     }
   };
+
+  if (!disableTransactionId) {
+    moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
+    moesifEvent.response.headers[TRANSACTION_ID_HEADER] = txId;
+  }
 
   return runHook(
     () => maskContent(moesifEvent),
@@ -298,10 +341,10 @@ function batch() {
   }
 }
 
-async function tryTrackRequest(event, request, response, before, after) {
+async function tryTrackRequest(event, request, response, before, after, txId) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
-    const moesifEvent = await makeMoesifEvent(request, response, before, after);
-    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, defaultApplicationId);
+    const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
+    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, appId);
 
     if (applicationId) {
       // only track this if there's an associated applicationId
@@ -334,10 +377,29 @@ async function handleRequest(event) {
   // when we inspect the request body later
   const response = await fetch(request.clone());
   const after = new Date();
+  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
-  event.waitUntil(tryTrackRequest(event, request, response, before, after));
+  event.waitUntil(
+    tryTrackRequest(
+      event,
+      request,
+      response,
+      before,
+      after,
+      txId
+    )
+  );
 
-  return response;
+  if (!disableTransactionId) {
+    const responseClone = new Response(response.body, response);
+
+    responseClone.headers.set('x-my-header', 'custom value')
+    responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
+
+    return responseClone;
+  } else {
+    return response;
+  }
 }
 
 addEventListener('fetch', event => {
