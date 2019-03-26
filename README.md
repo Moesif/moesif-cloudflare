@@ -84,7 +84,7 @@ automatically retrieve the userId without this, this is highly recommended to en
 ```javascript
 const identifyUser = (req, res) => {
   // your code here, must return a string
-  return req.user.id
+  return req.user.id;
 };
 ```
 
@@ -98,6 +98,21 @@ getSessionToken a function that takes `req` and `res` arguments and returns a se
 const getSessionToken = (req, res) => {
   // your code here, must return a string.
   return req.headers.get('Authorization');
+};
+```
+
+#### __`identifyCompany`__
+
+Type: `(Request, Response) => String`
+identifyCompany is a function that takes `req` and `res` as arguments
+and returns a companyId. This helps us attribute requests to unique companies. Even though Moesif can
+automatically retrieve the companyId without this, this is highly recommended to ensure accurate attribution.
+
+
+```javascript
+const identifyCompany = (req, res) => {
+  // your code here, must return a string
+  return req.company.id;
 };
 ```
 
