@@ -393,7 +393,6 @@ async function handleRequest(event) {
   if (!disableTransactionId) {
     const responseClone = new Response(response.body, response);
 
-    responseClone.headers.set('x-my-header', 'custom value')
     responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
 
     return responseClone;
