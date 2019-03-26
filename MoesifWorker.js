@@ -146,7 +146,7 @@ function headersToObject(headers) {
  * Hide anything that looks like a credit card
  * Perform a luhn check to reduce some false positives
  */
-function hideCreditCards(text) {
+function doHideCreditCards(text) {
   if (hideCreditCards) {
     return text.replace(/[0-9]{14,19}/g, (match) => {
       return luhnCheck(match)
@@ -267,7 +267,7 @@ async function makeMoesifEvent(request, response, before, after) {
         getApiVersion.name,
         undefined
       ),
-      body: hideCreditCards(requestBody),
+      body: doHideCreditCards(requestBody),
       time: before,
       uri: request.url,
       verb: request.method,
