@@ -29,9 +29,6 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
 
 }
 
-// TODO: remove
-console.log(INSTALL_OPTIONS);
-
 let {
   appId,
   hideCreditCards,
