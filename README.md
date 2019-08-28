@@ -69,50 +69,50 @@ INSTALL_OPTIONS = {
   // true or false
   "hideCreditCards": false
 };
-```	```AAd
+```
 
- *Please note `HIDE_CREDIT_CARDS`, `sessionTokenHeader`, and `userIdHeader` may be `null`.*	
+*Please note `HIDE_CREDIT_CARDS`, `sessionTokenHeader`, and `userIdHeader` may be `null`.*
 
- - click `Update Preview` to see changes in the preview window, and click `Deploy` to deploy the worker to production	
+- click `Update Preview` to see changes in the preview window, and click `Deploy` to deploy the worker to production
 
- Congratulations! If everything was done corectly, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.	
+Congratulations! If everything was done corectly, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
 
- ## Other Installation Options	
+## Other Installation Options
 
- See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for more alternatives for setting up Cloudflare workers.	
-
-
- ### Advanced Configuration	
-
- Moesif provides the most value when we can identify users. You may also want to specify metadata, mask certain data, or prevent tracking of certain requests entirely. This is possible with the hooks below.	
-
- To change the behavior of one of these hooks, replace the contents of that function in the Cloudflare Worker with the desired code.	
+See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for more alternatives for setting up Cloudflare workers.
 
 
- #### __`overrideApplicationId`__	
+### Advanced Configuration
 
- Type: `(MoesifEventModel) => String`	
-overrideApplicationId is a function that enables your worker to report events to different	
-moesif apps based on the event. You may want to do this if you have separate production and	
-staging environments.	
+Moesif provides the most value when we can identify users. You may also want to specify metadata, mask certain data, or prevent tracking of certain requests entirely. This is possible with the hooks below.
 
- ```javascript	
-const overrideApplicationId = moesifEvent => {	
-  return moesifEvent.request.uri.startsWith('https://stg.foo.com')	
-    ? '<< MOESIF APP ID FOR STAGING APP >>'	
-    : '<< MOESIF APP ID FOR PROD APP >>';	
-};	
-```	
-
- #### __`identifyUser`__	
-
- Type: `(Request, Response) => String`	
-identifyUser is a function that takes `req` and `res` as arguments	
-and returns a userId. This helps us attribute requests to unique users. Even though Moesif can	
-automatically retrieve the userId without this, this is highly recommended to ensure accurate attribution.	
+To change the behavior of one of these hooks, replace the contents of that function in the Cloudflare Worker with the desired code.
 
 
- ```javascript
+#### __`overrideApplicationId`__
+
+Type: `(MoesifEventModel) => String`
+overrideApplicationId is a function that enables your worker to report events to different
+moesif apps based on the event. You may want to do this if you have separate production and
+staging environments.
+
+```javascript
+const overrideApplicationId = moesifEvent => {
+  return moesifEvent.request.uri.startsWith('https://stg.foo.com')
+    ? '<< MOESIF APP ID FOR STAGING APP >>'
+    : '<< MOESIF APP ID FOR PROD APP >>';
+};
+```
+
+#### __`identifyUser`__
+
+Type: `(Request, Response) => String`
+identifyUser is a function that takes `req` and `res` as arguments
+and returns a userId. This helps us attribute requests to unique users. Even though Moesif can
+automatically retrieve the userId without this, this is highly recommended to ensure accurate attribution.
+
+
+```javascript
 const identifyUser = (req, res) => {
   // your code here, must return a string
   return req.user.id;
