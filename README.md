@@ -294,3 +294,7 @@ To view more more documentation on integration options, please visit __[the Inte
 
 [link-license]: https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/LICENSE
 [link-source]: https://github.com/moesif/moesif-cloudflare
+
+## Troubleshooting Manual Worker Install
+
+- Make sure your routes are set up correctly. Visit the Workers tab from the Cloudflare dashboard. Your route should look like `https://mycompany/*`. Note the protocol is specified, and there's a trailing `*`.
