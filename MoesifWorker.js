@@ -327,7 +327,7 @@ function batch() {
         headers: {
           Accept: 'application/json; charset=utf-8',
           'X-Moesif-Application-Id': applicationId,
-          'User-Agent': 'moesif-cloudfront'
+          'User-Agent': 'moesif-cloudflare'
         },
         body: JSON.stringify(appIdMap[applicationId])
       };
