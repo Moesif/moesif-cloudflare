@@ -3,7 +3,7 @@
 [![Software License][ico-license]][link-license]
 [![Source Code][ico-source]][link-source]
 
-[Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) automatically tracks API requests and send to Moesif for API debugging and analytics.
+[Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) automatically logs API calls to [Moesif](https://www.moesif.com) for API analytics and monitoring.
 
 [Source Code on GitHub](https://github.com/moesif/moesif-cloudflare)
 
@@ -12,19 +12,19 @@ After signing up for a Moesif account, your Moesif Application Id will be displa
 
 You can always find your Moesif Application Id at any time by logging 
 into the [_Moesif Portal_](https://www.moesif.com/), click on the top right menu,
-and then clicking _Installation_.
+ and then clicking _Installation_.
 
-## Install via Cloudflare App
+## Install via Cloudflare App (Simple install)
 
 Go to the [Moesif app](https://www.cloudflare.com/apps/moesif) on Cloudflare's App Marketplace and click _Preview_
 
-## Install via Cloudflare Dashboard
+## Install via Cloudflare Workers (Custom install)
 
-This option provides the most flexibility, allowing you to write custom logic to identify users, session tokens, etc per request.
+Installing via the Cloudflare Workers Dashboard provides the most flexibility, allowing you to write custom logic to identify users, session tokens, etc.
 
-- Visit the [Cloudfront Worker Dashboard](https://dash.cloudflare.com/workers). *(make sure you're looking at the Workers tab)*
-- Click the `Launch editor` button
-- Click the `Routes` tab and create a route under `Script enabled at:`. We suggest a pattern that matches all requests for your domain. Eg: If your domain is `foo.com`, **your pattern should be** `*foo.com/*`. This will match all requests to `foo.com` and any subdomains of `foo.com`.
+- Visit the [Cloudflare Workers Dashboard](https://dash.cloudflare.com/workers). *(make sure you're looking at the Workers tab)*
+- Click the `Launch Editor` button
+- Click the `Routes` tab and create a route under `Script enabled at:`. We suggest a pattern that matches all requests for your domain. Eg: If your domain is `acmeinc.com`, **your pattern should be** `*acmeinc.com/*`. This will match all requests to `acmeinc.com` and any subdomains of `acmeinc.com`.
 - Click the `Script` tab, and replace the editor content with the latest version of the [Moesif Cloudflare worker](https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/MoesifWorker.js).
 - replace any instances of the `INSTALL_OPTIONS` variable with desired values.
 - update the `INSTALL_OPTIONS` declaration with the desired values.
@@ -75,21 +75,56 @@ INSTALL_OPTIONS = {
 
 - click `Update Preview` to see changes in the preview window, and click `Deploy` to deploy the worker to production
 
-Congratulations! If everything was done corectly, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
+Congratulations! If everything was correct, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
 
-## Other Installation Options
+## Requests not being logged (Manual worker install)
+If you installed via Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 
 
-See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for more alternatives for setting up Cloudflare workers.
+The most common mistake is that a route pattern `*.acmeinc.com/*` matches only subdomains of acmeinc.com, but will not match `https://acmeinc.com`. 
+The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
 
+_The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
 
-### Advanced Configuration
+### Route patterns must include your zone
+
+If your zone is example.com, then the simplest possible route pattern you can have is example.com, which would match `http://example.com/` and `https://example.com/`, and nothing else. As with a URL, there is an implied path of `/` if you do not specify one.
+
+### Route patterns may not contain any query parameters
+
+For example, `https://example.com/?anything` is not a valid route pattern.
+
+### Route patterns may optionally begin with `http://` or `https://`
+
+If you omit a scheme in your route pattern, it will match both `http://` and `https://` URLs. If you include `http://` or `https://`, it will only match HTTP or HTTPS requests, respectively.
+
+    `https`://*.example.com/` matches `https://www.example.com/` but not `http://www.example.com/`
+
+    `*.example.com/` matches both `https`://www.example.com/` and `http://www.example.com/`.
+
+### Hostnames may optionally begin with `*`
+
+If a route pattern hostname begins with `*`, then it matches the host and all subhosts. If a route pattern hostname begins with `*.`, then it matches only all subhosts.
+
+    `*example.com/` matches `https://example.com/` and `https://www.example.com/`
+
+    `*.example.com/` matches `https://www.example.com/` but not `https://example.com/`
+
+### Paths may optionally end with `*`
+
+If a route pattern path ends with `*`, then it matches all suffixes of that path.
+
+    `https://example.com/path*` matches `https://example.com/path` and `https://example.com/path2` and `https://example.com/path/readme.txt`
+
+    `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
+
+## Configuration optionsPermalink
 
 Moesif provides the most value when we can identify users. You may also want to specify metadata, mask certain data, or prevent tracking of certain requests entirely. This is possible with the hooks below.
 
 To change the behavior of one of these hooks, replace the contents of that function in the Cloudflare Worker with the desired code.
 
 
-#### __`overrideApplicationId`__
+### __`overrideApplicationId`__
 
 Type: `(MoesifEventModel) => String`
 overrideApplicationId is a function that enables your worker to report events to different
@@ -98,13 +133,13 @@ staging environments.
 
 ```javascript
 const overrideApplicationId = moesifEvent => {
-  return moesifEvent.request.uri.startsWith('https://stg.foo.com')
+  return moesifEvent.request.uri.startsWith('https://stg.acmeinc.com')
     ? '<< MOESIF APP ID FOR STAGING APP >>'
     : '<< MOESIF APP ID FOR PROD APP >>';
 };
 ```
 
-#### __`identifyUser`__
+### __`identifyUser`__
 
 Type: `(Request, Response) => String`
 identifyUser is a function that takes `req` and `res` as arguments
@@ -119,7 +154,7 @@ const identifyUser = (req, res) => {
 };
 ```
 
-#### __`getSessionToken`__
+### __`getSessionToken`__
 
 Type: `(Request, Response) => String`
 getSessionToken a function that takes `req` and `res` arguments and returns a session token (i.e. such as an API key).
@@ -132,7 +167,7 @@ const getSessionToken = (req, res) => {
 };
 ```
 
-#### __`identifyCompany`__
+### __`identifyCompany`__
 
 Type: `(Request, Response) => String`
 identifyCompany is a function that takes `req` and `res` as arguments
@@ -147,7 +182,7 @@ const identifyCompany = (req, res) => {
 };
 ```
 
-#### __`getApiVersion`__
+### __`getApiVersion`__
 
 Type: `(Request, Response) => String`
 getApiVersion is a function that takes a `req` and `res` arguments and returns a string to tag requests with a specific version of your API.
@@ -160,7 +195,7 @@ const getApiVersion = (req, res) => {
 };
 ```
 
-#### __`getMetadata`__
+### __`getMetadata`__
 
 Type: `(Request, Response) => Object`
 getMetadata is a function that takes a `req` and `res` and returns an object that allows you
@@ -177,7 +212,7 @@ const getMetadata = (req, res) => {
 };
 ```
 
-#### __`skip`__
+### __`skip`__
 
 Type: `(Request, Response) => Boolean`
 skip is a function that takes a `req` and `res` arguments and returns true if the event should be skipped (i.e. not logged)
@@ -195,7 +230,7 @@ const skip = (req, res) => {
 };
 ```
 
-#### __`maskContent`__
+### __`maskContent`__
 
 Type: `MoesifEventModel => MoesifEventModel`
 maskContent is a function that takes the final Moesif event model (rather than the req/res objects) as an argument before being sent to Moesif.
@@ -264,28 +299,33 @@ const maskContent = moesifEvent => {
 ```
 
 For more documentation regarding on these fields,
-see below or the [Moesif Node API Documentation](https://www.moesif.com/docs/api?javascript).
+see below or the [Moesif API Reference](https://www.moesif.com/docs/api?javascript#create-an-event).
 
-Fields | Required | Description
+Name | Required | Description
 --------- | -------- | -----------
-request.time | Required | Timestamp for the request in ISO 8601 format
-request.uri | Required | Full uri such as https://api.com/?query=string including host, query string, etc
-request.verb | Required | HTTP method used, i.e. `GET`, `POST`
-request.api_version | Optional | API Version you want to tag this request with
-request.ip_address | Optional | IP address of the end user
-request.headers | Required | Headers of the  request
-request.body | Optional | Body of the request in JSON format
+request | __true__ | The object that specifies the request message
+request.time| __true__ | Timestamp for the request in ISO 8601 format
+request.uri| __true__ | Full uri such as _https://api.com/?query=string_ including host, query string, etc
+request.verb| __true__ | HTTP method used, i.e. `GET`, `POST`
+request.api_version| false | API Version you want to tag this request with such as _1.0.0_
+request.ip_address| false | IP address of the requester, If not set, we use the IP address of your logging API calls.
+request.headers| __true__ | Headers of the  request as a `Map<string, string>`. Multiple headers with the same key name should be combined together such that the values are joined by a comma. [HTTP Header Protocol on w3.org](https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2)
+request.body| false | Body of the request in JSON format
 ||
-response.time | Required | Timestamp for the response in ISO 8601 format
-response.status | Required | HTTP status code such as 200 or 500
-response.ip_address | Optional | IP address of the responding server
-response.headers | Required | Headers of the response
-response.body | Required | Body of the response in JSON format
-
-## Examples
-
+response | false | The object that specifies the response message, not set implies no response received such as a timeout.
+response.time| __true__ | Timestamp for the response in ISO 8601 format
+response.status| __true__ | HTTP status code as number such as _200_ or _500_
+response.ip_address| false | IP address of the responding server
+response.headers| __true__ | Headers of the response as a `Map<string, string>`. Multiple headers with the same key name should be combined together such that the values are joined by a comma. [HTTP Header Protocol on w3.org](https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2)
+response.body| false | Body of the response in JSON format
+||
+session_token | _Recommend_ | The end user session token such as a JWT or API key, which may or may not be temporary. Moesif will auto-detect the session token automatically if not set.
+user_id | _Recommend_ | Identifies this API call to a permanent user_id
+metadata | false | A JSON Object consisting of any custom metadata to be stored with this event.
 
 ## Other integrations
+
+See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for other alternatives for setting up Cloudflare workers.
 
 To view more more documentation on integration options, please visit __[the Integration Options Documentation](https://www.moesif.com/docs/getting-started/integration-options/).__
 
@@ -294,7 +334,3 @@ To view more more documentation on integration options, please visit __[the Inte
 
 [link-license]: https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/LICENSE
 [link-source]: https://github.com/moesif/moesif-cloudflare
-
-## Troubleshooting Manual Worker Install
-
-- Make sure your routes are set up correctly. Visit the Workers tab from the Cloudflare dashboard. Your route should look like `https://mycompany/*`. Note the protocol is specified, and there's a trailing `*`.
