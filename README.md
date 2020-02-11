@@ -77,23 +77,25 @@ INSTALL_OPTIONS = {
 
 Congratulations! If everything was correct, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
 
-## Requests not being logged (Manual worker install)
-If you installed via Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 
+## Troubleshooting
+
+### Requests not being logged
+If you installed via the custom install with Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 
 
 The most common mistake is that a route pattern `*.acmeinc.com/*` matches only subdomains of acmeinc.com, but will not match `https://acmeinc.com`. 
 The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
 
 _The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
 
-### Route patterns must include your zone
+#### Route patterns must include your zone
 
 If your zone is example.com, then the simplest possible route pattern you can have is example.com, which would match `http://example.com/` and `https://example.com/`, and nothing else. As with a URL, there is an implied path of `/` if you do not specify one.
 
-### Route patterns may not contain any query parameters
+#### Route patterns may not contain any query parameters
 
 For example, `https://example.com/?anything` is not a valid route pattern.
 
-### Route patterns may optionally begin with `http://` or `https://`
+#### Route patterns may optionally begin with `http://` or `https://`
 
 If you omit a scheme in your route pattern, it will match both `http://` and `https://` URLs. If you include `http://` or `https://`, it will only match HTTP or HTTPS requests, respectively.
 
@@ -101,7 +103,7 @@ If you omit a scheme in your route pattern, it will match both `http://` and `ht
 
     `*.example.com/` matches both `https`://www.example.com/` and `http://www.example.com/`.
 
-### Hostnames may optionally begin with `*`
+#### Hostnames may optionally begin with `*`
 
 If a route pattern hostname begins with `*`, then it matches the host and all subhosts. If a route pattern hostname begins with `*.`, then it matches only all subhosts.
 
@@ -109,7 +111,7 @@ If a route pattern hostname begins with `*`, then it matches the host and all su
 
     `*.example.com/` matches `https://www.example.com/` but not `https://example.com/`
 
-### Paths may optionally end with `*`
+#### Paths may optionally end with `*`
 
 If a route pattern path ends with `*`, then it matches all suffixes of that path.
 
@@ -117,12 +119,11 @@ If a route pattern path ends with `*`, then it matches all suffixes of that path
 
     `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
 
-## Configuration optionsPermalink
+## Configuration options
 
 Moesif provides the most value when we can identify users. You may also want to specify metadata, mask certain data, or prevent tracking of certain requests entirely. This is possible with the hooks below.
 
 To change the behavior of one of these hooks, replace the contents of that function in the Cloudflare Worker with the desired code.
-
 
 ### __`overrideApplicationId`__
 
