@@ -4,61 +4,61 @@
 [![Source Code][ico-source]][link-source]
 
 [Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) automatically logs API calls to [Moesif](https://www.moesif.com) for API analytics and monitoring.
-
 [Source Code on GitHub](https://github.com/moesif/moesif-cloudflare)
 
-Your Moesif Application Id can be found in the [_Moesif Portal_](https://www.moesif.com/).
-After signing up for a Moesif account, your Moesif Application Id will be displayed during the onboarding steps. 
 
-You can always find your Moesif Application Id at any time by logging 
-into the [_Moesif Portal_](https://www.moesif.com/), click on the top right menu,
- and then clicking _Installation_.
+You can install Moesif using the Cloudflare Marketplace (simple install) or you can add the `MoesifWorker.js`  script directly (custom install).
+The custom install provides the most flexibility, allowing you to write custom logic to identify users, session tokens, etc.
 
 ## Install via Cloudflare App (Simple install)
 
-Go to the [Moesif app](https://www.cloudflare.com/apps/moesif) on Cloudflare's App Marketplace and click _Preview_
+* Go to the [Moesif app on Cloudflare](https://www.cloudflare.com/apps/moesif) and click _Preview_
+* Add your Application Id which will be displayed during the onboarding steps when signing up for [Moesif](https://www.moesif.com/). 
+* Click _Finish Installing onto your site_ button.
 
 ## Install via Cloudflare Workers (Custom install)
 
-Installing via the Cloudflare Workers Dashboard provides the most flexibility, allowing you to write custom logic to identify users, session tokens, etc.
+### 1. Add script to your worker
 
-- Visit the [Cloudflare Workers Dashboard](https://dash.cloudflare.com/workers). *(make sure you're looking at the Workers tab)*
-- Click the `Launch Editor` button
-- Click the `Routes` tab and create a route under `Script enabled at:`. We suggest a pattern that matches all requests for your domain. Eg: If your domain is `acmeinc.com`, **your pattern should be** `*acmeinc.com/*`. This will match all requests to `acmeinc.com` and any subdomains of `acmeinc.com`.
-- Click the `Script` tab, and replace the editor content with the latest version of the [Moesif Cloudflare worker](https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/MoesifWorker.js).
-- replace any instances of the `INSTALL_OPTIONS` variable with desired values.
-- update the `INSTALL_OPTIONS` declaration with the desired values.
-
-For example:
+Go to your worker in the [Cloudflare Workers Dashboard](https://dash.cloudflare.com/workers). 
+Add the contents of the file [MoesifWorker.js](https://raw.githubusercontent.com/Moesif/moesif-cloudflare/master/MoesifWorker.js) to your worker.
+The first three lines of `MoesifWorker.js` must be above any of your other `addEventListener` functions as shown below
 
 ```javascript
-INSTALL_OPTIONS = {
-  // your moesif App Id
-  "appId": "",
+// Add Moesif handler from top of `MoesifWorker.js` file
+addEventListener('fetch', event => {
+  logRequest(event);
+});
 
-  // only used by default identifyUser() implementation
-  "userIdHeader": "",
+// A sample hello world app
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
 
-  // only used by default identifyUser() implementation
-  "companyIdHeader": "",
+async function handleRequest(request) {
+  return new Response('hello world', {status: 200})
+}
 
-  // only used by default getSessionToken() implementation
-  "sessionTokenHeader": "",
-
-  // true or false
-  "hideCreditCards": true
-};
+// Rest of code from MoesifWorker.js file
 ```
 
-becomes
+### 2. Set up worker route
+
+If using a custom domain, you'll need to create add a route.
+We recommend matching all requests for your domain. For example if your domain is `acmeinc.com`, your pattern should be `*acmeinc.com/*`.
+
+### 3. Set Moesif options
+
+Set the `INSTALL_OPTIONS.appId` field to your Moesif Application Id.  
+Your Moesif Application Id will be displayed during the onboarding steps when signing up for [Moesif](https://www.moesif.com/). 
 
 ```javascript
 INSTALL_OPTIONS = {
   // your moesif App Id
-  "appId": "<< YOUR MOESIF APPLICATION ID >>",
+  "appId": "Your Moesif Application Id",
 
   // only used by default identifyUser() implementation
-  "userIdHeader": "User-Id",
+  "userIdHeader": "X-Custom-User-Id",
 
   // only used by default identifyUser() implementation
   "companyIdHeader": "",
@@ -71,13 +71,40 @@ INSTALL_OPTIONS = {
 };
 ```
 
-*Please note `HIDE_CREDIT_CARDS`, `sessionTokenHeader`, and `userIdHeader` may be `null`.*
+Besides the static fields in `INSTALL_OPTIONS`, you can also override the functions hooks like `identifyUser` and `skip`.
+Just search for `Configuration hooks` in the `MoesifWorker.js` file. 
 
-- click `Update Preview` to see changes in the preview window, and click `Deploy` to deploy the worker to production
+### 4. Deploy changes
 
-Congratulations! If everything was correct, Moesif should now be tracking all network requests that match the route you specified earlier. If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
+Click `Save and Deploy` to see changes in the preview window. In the Cloudflare editor, make a few GET calls to your service.
+The API calls should show up in Moesif event stream. 
+
+If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
 
 ## Troubleshooting
+
+### Timeout errors
+Your worker code should register a function that calls `event.respondWith` to ensure a response is returned. 
+Moesif will not return the response directly. 
+
+```javascript
+// Add Moesif handler from top of `MoesifWorker.js` file
+addEventListener('fetch', event => {
+  logRequest(event);
+});
+
+// Sample hello world app
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+  return new Response('hello world', {status: 200})
+}
+
+// Rest of `MoesifWorker.js` file
+```
+
 
 ### Requests not being logged
 If you installed via the custom install with Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 

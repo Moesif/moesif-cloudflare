@@ -1,26 +1,41 @@
 // moesif-cloudflare
 // https://github.com/Moesif/moesif-cloudflare
 //
-// Please update the `applicationId` as well as any hooks
-// you'd like to use (eg: identifyUser, getSessionToken, etc)
+// For manual install, areas of interest are tagged with MOESIF_INSTALL
 
-// this value is defined by the Cloudflare App Worker framework
+/**************************
+* MOESIF_INSTALL
+* Register logRequest handler.
+* This line should be called before any other event listeners in your application
+**************************/
+addEventListener('fetch', event => {
+  logRequest(event);
+});
+
+/***********************
+ * MOESIF_INSTALL
+ * Main MoesifWorker.js
+************************/
+
+// this value is defined automatically by the Cloudflare App framework
 var INSTALL_OPTIONS;
 
+// Not installed via Cloudflare App framework, so set your options manually
 if (typeof INSTALL_OPTIONS === 'undefined') {
-  // only for manual installation (not installed via Cloudflare Apps)
-
   INSTALL_OPTIONS = {
-    // your moesif App Id
+    /*********************************
+     * MOESIF_INSTALL
+     * Set Your Moesif Application Id
+    *********************************/
     "appId": "",
 
-    // only used by default identifyUser() implementation
+    // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead. 
     "userIdHeader": "",
 
-    // only used by default identifyUser() implementation
+    // Only used by CloudFlare App Worker Framework. Modify identifyCompany() function instead.
     "companyIdHeader": "",
 
-    // only used by default getSessionToken() implementation
+    // Only used by CloudFlare App Worker Framework. Modify getSessionToken() function instead.
     "sessionTokenHeader": "",
 
     // true or false
@@ -41,30 +56,10 @@ let {
   urlPatterns = []
 } = INSTALL_OPTIONS;
 
-urlPatterns = urlPatterns.map(({ appId, regex }) => {
-  try {
-    return {
-      regex: new RegExp(regex),
-      appId
-    };
-  } catch (e) {
-    console.error(e);
-  }
-}).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
-
-if (!appId && urlPatterns.length === 0) {
-  console.error('Cannot track events. No App ID or valid URL Pattern specified.');
-}
-
-const overrideApplicationId = moesifEvent => {
-  // you may want to use a different app ID based on the request being made
-  const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
-
-  return pattern
-    ? pattern.appId // may be an empty string, which means don't track this
-    : appId;
-};
-
+/*********************
+ * MOESIF_INSTALL
+ * Configuration hooks
+**********************/
 const identifyUser = (req, res) => {
   return req.headers.get(userIdHeader) || res.headers.get(userIdHeader);
 };
@@ -93,13 +88,33 @@ const maskContent = moesifEvent => {
   return moesifEvent;
 };
 
-//
-// moesif worker code
-//
-
-const MAX_REQUESTS_PER_BATCH = 15;
-const BATCH_DURATION = 5000; // ms
+const MAX_REQUESTS_PER_BATCH = 10;
+const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
+
+urlPatterns = urlPatterns.map(({ appId, regex }) => {
+  try {
+    return {
+      regex: new RegExp(regex),
+      appId
+    };
+  } catch (e) {
+    console.error(e);
+  }
+}).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
+
+if (!appId && urlPatterns.length === 0) {
+  console.error('Cannot track events. No App ID or valid URL Pattern specified.');
+}
+
+const overrideApplicationId = moesifEvent => {
+  // you may want to use a different app ID based on the request being made
+  const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
+
+  return pattern
+    ? pattern.appId // may be an empty string, which means don't track this
+    : appId;
+};
 
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
 let batchRunning = false;
@@ -345,6 +360,7 @@ async function tryTrackRequest(event, request, response, before, after, txId) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
     const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
     const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, appId);
+    event.waitUntil(moesifEvent);
 
     if (applicationId) {
       // only track this if there's an associated applicationId
@@ -370,12 +386,14 @@ async function tryTrackRequest(event, request, response, before, after, txId) {
   }
 }
 
-async function handleRequest(event) {
+async function logRequest(event) {
   const request = event.request;
   const before = new Date();
   // use a cloned request so the read buffer isn't locked
   // when we inspect the request body later
-  const response = await fetch(request.clone());
+  const fetchResp = fetch(request.clone());
+  event.waitUntil(fetchResp);
+  const response = await fetchResp;
   const after = new Date();
   const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
@@ -392,19 +410,9 @@ async function handleRequest(event) {
 
   if (!disableTransactionId) {
     const responseClone = new Response(response.body, response);
-
     responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
-
     return responseClone;
   } else {
     return response;
   }
 }
-
-addEventListener('fetch', event => {
-  // if this worker breaks, don't break the site
-  // https://developers.cloudflare.com/workers/writing-workers/handling-errors/
-  event.passThroughOnException();
-
-  event.respondWith(handleRequest(event));
-});
