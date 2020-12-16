@@ -49,14 +49,14 @@ We recommend matching all requests for your domain. For example if your domain i
 
 ### 3. Set Moesif options
 
-Set the `INSTALL_OPTIONS.appId` field to your Moesif Application Id.  
+Set the `INSTALL_OPTIONS.applicationId` field to your Moesif Application Id.  
 Your Moesif Application Id will be displayed during the onboarding steps when signing up for [Moesif](https://www.moesif.com/). 
 
 Additional options are below:
 ```javascript
 INSTALL_OPTIONS = {
     // Your Moesif Application Id
-  "appId": "Your Moesif Application Id",
+    "applicationId": "Your Moesif Application Id",
 
     // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead. 
     "userIdHeader": "",

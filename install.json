@@ -7,51 +7,51 @@
   ],
   "options": {
     "properties": {
-      "appId": {
+      "applicationId": {
         "order": 10,
-        "title": "Default Moesif App Id",
-        "description": "Requred, unless \"App Id Overrides\" are used",
+        "title": "Your Moesif Application Id",
+        "description": "Required, unless you set the urlPatterns option. sign up for free on <a href='https://www.moesif.com/?language=cloudflare-workers'>Moesif's website</a>",
         "type": "string",
         "default": ""
       },
       "userIdHeader": {
         "order": 20,
-        "title": "Request / Response Header to Identify User",
-        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/users/'>User Profiles</a> and <a href='https://www.moesif.com/docs/getting-started/companies/'>Company Profiles</a>.",
+        "title": "Request or Response header name to identify users",
+        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/companies/'>Company Profiles</a>.",
         "type": "string",
         "default": ""
       },
       "companyIdHeader": {
         "order": 40,
-        "title": "Request / Response Header to Identify Company",
-        "description": "Optional",
+        "title": "Request or Response header name to identify companies",
+        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/users/'>User Profiles</a>.",
         "type": "string",
         "default": ""
       },
       "sessionTokenHeader": {
         "order": 50,
-        "title": "Request / Response Header Containing Session Token",
+        "title": "Request or Response header name containing a user's API key or session token",
         "description": "Optional",
         "type": "string",
         "default": ""
       },
       "hideCreditCards": {
         "order": 60,
-        "title": "Remove Credit Card Numbers from API Requests. Leave this enabled if your API processes credit card information.",
+        "title": "Remove Credit Card Numbers from API Requests based on a Luhn check.",
         "type": "boolean",
         "default": true
       },
       "disableTransactionId": {
         "order": 65,
         "title": "Disable Transaction Id generation",
-        "description": "Setting to true will prevent insertion of the <code>X-Moesif-Transaction-Id</code> header.",
+        "description": "Setting to true will prevent insertion of the <code>X-Moesif-Transaction-Id</code> headers.",
         "type": "boolean",
         "default": false
       },
       "urlPatterns": {
         "order": 70,
-        "title": "App Id Overrides",
-        "description": "Advanced usage.<br>For assistance with advanced configuration, please contact <a href='mailto:support@moesif.com'>support@moesif.com</a>. Regular expressions are evaluated in order (top to bottom), and the appId for the first matching regex will be used for a given request. <br> To manually test your regular expressions, you can use the following JavaScript code: new RegExp(urlRegex).test(moesifAppId)",
+        "title": "Mapping of URL RegEx to Moesif Application Ids",
+        "description": "Use multiple applications ids based on URL patterns. For example, if your worker has multiple environments like a staging at <i>staging.api.acmeinc.com</i> and production at <i>api.acmeinc.com</i>, you can log to different application in Moesif. Patterns are prioritized in order from top. <br> You can manually test your expression via <a href='https://regex101.com/'>this site</a>.",
         "type": "array",
         "items": {
           "title": "Item",
@@ -59,18 +59,39 @@
           "properties": {
             "regex": {
               "order": 1,
-              "title": "URL Regex",
-              "placeholder": "^https://mydomain.com/api",
+              "title": "URL RegEx",
+              "placeholder": "^https://staging.acmeinc.com/api",
               "type": "string"
             },
-            "appId": {
+            "applicationId": {
               "order": 2,
-              "title": "Moesif App Id for Requests with URLs Matching Above Regular Expression",
-              "placeholder": "leave blank to ignore requests matching this pattern",
+              "title": "Your Moesif Application Id. If blank, requests are not logged to Moesif.",
+              "placeholder": "Your Moesif Application Id",
               "type": "string"
             }
           }
         }
+      },
+      "logIncomingRequests": {
+        "order": 75,
+        "title": "Log Incoming API Requests",
+        "description": "Log incoming API calls hitting your Cloudflare Worker.",
+        "type": "boolean",
+        "default": true
+      },
+      "logOutgoingRequests": {
+        "order": 80,
+        "title": "Log Outgoing API Requests",
+        "description": "Log outgoing calls to your origin server from your Cloudflare Worker.",
+        "type": "boolean",
+        "default": true
+      },
+      "debug": {
+        "order": 100,
+        "title": "Enable debug mode",
+        "description": "Print debug messages to console which may be helpful when contacting Moesif support.",
+        "type": "boolean",
+        "default": false
       }
     }
   }
