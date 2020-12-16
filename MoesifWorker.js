@@ -9,7 +9,7 @@
 * This line should be called before any other event listeners in your application
 **************************/
 addEventListener('fetch', event => {
-  logRequest(event);
+  event.waitUntil(logRequest(event));
 });
 
 /***********************
@@ -19,6 +19,9 @@ addEventListener('fetch', event => {
 
 // this value is defined automatically by the Cloudflare App framework
 var INSTALL_OPTIONS;
+var INSTALL_ID;
+var INSTALL_PRODUCT;
+var INSTALL_TYPE = 'app';
 
 // Not installed via Cloudflare App framework, so set your options manually
 if (typeof INSTALL_OPTIONS === 'undefined') {
@@ -42,8 +45,18 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     "hideCreditCards": true,
 
     // set to true to prevent insertion of X-Moesif-Transaction-Id
-    "disableTransactionId": false
+    "disableTransactionId": false,
+
+    // Log incoming API calls hitting your Cloudflare Worker
+    "logIncomingRequests": true,
+
+    // Log outgoing calls to your origin server from your Cloudflare Worker
+    "logOutgoingRequests": true,
+
+    // Print debug messages to console
+    "debug": false
   };
+  INSTALL_TYPE = 'custom';
 }
 
 let {
@@ -53,7 +66,10 @@ let {
   sessionTokenHeader,
   userIdHeader,
   companyIdHeader,
-  urlPatterns = []
+  urlPatterns = [],
+  logIncomingRequests,
+  logOutgoingRequests,
+  debug
 } = INSTALL_OPTIONS;
 
 /*********************
@@ -92,6 +108,14 @@ const MAX_REQUESTS_PER_BATCH = 10;
 const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
 
+if (typeof INSTALL_ID === 'undefined') {
+  INSTALL_ID = undefined;
+}
+
+if (typeof INSTALL_PRODUCT === 'undefined') {
+  INSTALL_PRODUCT = undefined;
+}
+
 urlPatterns = urlPatterns.map(({ appId, regex }) => {
   try {
     return {
@@ -118,7 +142,6 @@ const overrideApplicationId = moesifEvent => {
 
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
 let batchRunning = false;
-
 let jobs = [];
 
 function isMoesif(request) {
@@ -129,6 +152,10 @@ function sleep(ms) {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+function moesifLog(message) {
+  if (debug) console.log(`[MoesifWorker] ${message}`);
 }
 
 function runHook(fn, name, defaultValue) {
@@ -240,6 +267,9 @@ function uuid4() {
 }
 
 async function makeMoesifEvent(request, response, before, after, txId) {
+  moesifLog(`makeMoesifEvent start`)
+  moesifLog(JSON.stringify({request: request, response: response}));
+
   const [
     requestBody,
     responseBody
@@ -248,40 +278,40 @@ async function makeMoesifEvent(request, response, before, after, txId) {
     // the worker later reads the response body
     // since reading the stream twice creates an error,
     // let's clone `response`
-    response.clone().text()
+    response && response.clone ? response.clone().text() : Promise.resolve(undefined)
   ]);
   const moesifEvent = {
     userId: runHook(
       () => identifyUser(request, response),
-      identifyUser.name,
+      'identifyUser',
       undefined
     ),
 
     companyId: runHook(
       () => identifyCompany(request, response),
-      identifyCompany.name,
+      'identifyCompany',
       undefined
     ),
 
     sessionToken: runHook(
       () => getSessionToken(request, response),
-      getSessionToken.name,
+      'getSessionToken',
       undefined
     ),
 
     metadata: runHook(
       () => getMetadata(request, response),
-      getMetadata.name,
+      'getMetadata',
       undefined
     ),
 
     request: {
       apiVersion: runHook(
         () => getApiVersion(request, response),
-        getApiVersion.name,
+        'getApiVersion',
         undefined
       ),
-      body: doHideCreditCards(requestBody),
+      body: requestBody ? doHideCreditCards(requestBody) : undefined,
       time: before,
       uri: request.url,
       verb: request.method,
@@ -290,27 +320,25 @@ async function makeMoesifEvent(request, response, before, after, txId) {
     },
     response: {
       time: after,
-      body: doHideCreditCards(responseBody),
+      body: responseBody ? doHideCreditCards(responseBody) : undefined,
       status: response.status,
-      headers: headersToObject(response.headers)
-      // ip_address is not permitted through cloudfront at this time
-      // https://community.cloudflare.com/t/allow-direct-ip-access-from-workers-and-all-headers-with-fetch/48240/2
-    }
+      headers: headersToObject(response.headers),
+    },
+    direction: response.isEmpty ? 'Incoming' : 'Outgoing' 
   };
 
-  if (!disableTransactionId) {
-    moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
-    moesifEvent.response.headers[TRANSACTION_ID_HEADER] = txId;
-  }
-
+  moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
+  
   return runHook(
     () => maskContent(moesifEvent),
-    maskContent.name,
+    'maskContent',
     moesifEvent
   );
 }
 
 async function handleBatch() {
+  moesifLog(`handleBatch start`)
+
   if (!batchRunning) {
     batchRunning = true;
 
@@ -323,28 +351,40 @@ async function handleBatch() {
 }
 
 function batch() {
+  moesifLog(`batch start`)
+
   if (jobs.length > 0) {
     const appIdMap = {};
+    moesifLog(`batch has jobs`)
 
     jobs.forEach(({ applicationId, moesifEvent }) => {
       if (!(applicationId in appIdMap)) {
         appIdMap[applicationId] = [];
       }
-
-      appIdMap[applicationId].push(moesifEvent);
+      
+      if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) || 
+          (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
+        appIdMap[applicationId].push(moesifEvent);
+      }
     });
 
     let promises = [];
 
     Object.keys(appIdMap).forEach(applicationId => {
+      const body = JSON.stringify(appIdMap[applicationId]);
+      moesifLog(body);
+
       const options = {
         method: 'POST',
         headers: {
-          Accept: 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
           'X-Moesif-Application-Id': applicationId,
-          'User-Agent': 'moesif-cloudflare'
+          'User-Agent': 'moesif-cloudflare',
+          'X-Moesif-Cf-Install-Id': INSTALL_ID,          
+          'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
+          'X-Moesif-Cf-Install-Type': INSTALL_TYPE,
         },
-        body: JSON.stringify(appIdMap[applicationId])
+        body: body
       };
 
       promises.push(fetch(BATCH_URL, options));
@@ -357,9 +397,11 @@ function batch() {
 }
 
 async function tryTrackRequest(event, request, response, before, after, txId) {
-  if (!isMoesif(request) && !runHook(() => skip(request, response), skip.name, false)) {
+  if (!isMoesif(request) && !runHook(() => skip(request, response), 'skip', false)) {
+    moesifLog(`tryTrackRequest start url=${request.url}`)
+
     const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
-    const applicationId = runHook(() => overrideApplicationId(moesifEvent), overrideApplicationId.name, appId);
+    const applicationId = runHook(() => overrideApplicationId(moesifEvent), 'overrideApplicationId', appId);
     event.waitUntil(moesifEvent);
 
     if (applicationId) {
@@ -386,14 +428,45 @@ async function tryTrackRequest(event, request, response, before, after, txId) {
   }
 }
 
+let EmptyResponse = class Response {
+  constructor() {
+    this.isEmpty = true
+    this.headers = new Headers();
+    this.status = 599;
+    this.statusText = undefined;
+    this.url = undefined
+  }
+}
+
 async function logRequest(event) {
-  const request = event.request;
+
+  if (event.request._logged) {
+    return;
+  }
+
+  const request = event.request.clone();
+  request._logged = true;
+  event.request._logged = true;
+
+  moesifLog(`logRequest start url=${request.url}`)
+
   const before = new Date();
   // use a cloned request so the read buffer isn't locked
   // when we inspect the request body later
-  const fetchResp = fetch(request.clone());
-  event.waitUntil(fetchResp);
-  const response = await fetchResp;
+
+  const race = Promise.race([
+    fetch(request),
+    sleep(10000),
+  ]);
+  event.waitUntil(race);
+  moesifLog(`logging request url=${request.url}`)
+
+  const response = await race;
+  if (response) {
+    moesifLog(`response=${JSON.stringify(response)}`);
+  } else {
+    moesifLog('No response logged');
+  }
   const after = new Date();
   const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
@@ -401,14 +474,14 @@ async function logRequest(event) {
     tryTrackRequest(
       event,
       request,
-      response,
+      (response ? response : new EmptyResponse()),
       before,
       after,
       txId
     )
   );
 
-  if (!disableTransactionId) {
+  if (!disableTransactionId && response && response.body) {
     const responseClone = new Response(response.body, response);
     responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
     return responseClone;
