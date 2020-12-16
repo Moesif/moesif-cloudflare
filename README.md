@@ -27,7 +27,7 @@ The first three lines of `MoesifWorker.js` must be above any of your other `addE
 ```javascript
 // Add Moesif handler from top of `MoesifWorker.js` file
 addEventListener('fetch', event => {
-  logRequest(event);
+  event.waitUntil(logRequest(event));
 });
 
 // A sample hello world app
@@ -52,22 +52,34 @@ We recommend matching all requests for your domain. For example if your domain i
 Set the `INSTALL_OPTIONS.appId` field to your Moesif Application Id.  
 Your Moesif Application Id will be displayed during the onboarding steps when signing up for [Moesif](https://www.moesif.com/). 
 
+Additional options are below:
 ```javascript
 INSTALL_OPTIONS = {
-  // your moesif App Id
+    // Your Moesif Application Id
   "appId": "Your Moesif Application Id",
 
-  // only used by default identifyUser() implementation
-  "userIdHeader": "X-Custom-User-Id",
+    // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead. 
+    "userIdHeader": "",
 
-  // only used by default identifyUser() implementation
-  "companyIdHeader": "",
+    // Only used by CloudFlare App Worker Framework. Modify identifyCompany() function instead.
+    "companyIdHeader": "",
 
-  // only used by default getSessionToken() implementation
-  "sessionTokenHeader": "Authorization",
+    // Only used by CloudFlare App Worker Framework. Modify getSessionToken() function instead.
+    "sessionTokenHeader": "",
 
-  // true or false
-  "hideCreditCards": false
+    // true or false
+    "hideCreditCards": true,
+
+    // set to true to prevent insertion of X-Moesif-Transaction-Id
+    "disableTransactionId": false,
+
+    // Log incoming API calls hitting your Cloudflare Worker
+    "logIncomingRequests": true,
+
+    // Log outgoing calls to your origin server from your Cloudflare Worker
+    "logOutgoingRequests": true,
+
+    // Print debug messages to console
 };
 ```
 
@@ -80,71 +92,6 @@ Click `Save and Deploy` to see changes in the preview window. In the Cloudflare 
 The API calls should show up in Moesif event stream. 
 
 If you have any issues with set up, please reach out to support@moesif.com with the subject `Cloudflare Workers`.
-
-## Troubleshooting
-
-### Timeout errors
-Your worker code should register a function that calls `event.respondWith` to ensure a response is returned. 
-Moesif will not return the response directly. 
-
-```javascript
-// Add Moesif handler from top of `MoesifWorker.js` file
-addEventListener('fetch', event => {
-  logRequest(event);
-});
-
-// Sample hello world app
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
-
-async function handleRequest(request) {
-  return new Response('hello world', {status: 200})
-}
-
-// Rest of `MoesifWorker.js` file
-```
-
-
-### Requests not being logged
-If you installed via the custom install with Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 
-
-The most common mistake is that a route pattern `*.acmeinc.com/*` matches only subdomains of acmeinc.com, but will not match `https://acmeinc.com`. 
-The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
-
-_The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
-
-#### Route patterns must include your zone
-
-If your zone is example.com, then the simplest possible route pattern you can have is example.com, which would match `http://example.com/` and `https://example.com/`, and nothing else. As with a URL, there is an implied path of `/` if you do not specify one.
-
-#### Route patterns may not contain any query parameters
-
-For example, `https://example.com/?anything` is not a valid route pattern.
-
-#### Route patterns may optionally begin with `http://` or `https://`
-
-If you omit a scheme in your route pattern, it will match both `http://` and `https://` URLs. If you include `http://` or `https://`, it will only match HTTP or HTTPS requests, respectively.
-
-    `https`://*.example.com/` matches `https://www.example.com/` but not `http://www.example.com/`
-
-    `*.example.com/` matches both `https`://www.example.com/` and `http://www.example.com/`.
-
-#### Hostnames may optionally begin with `*`
-
-If a route pattern hostname begins with `*`, then it matches the host and all subhosts. If a route pattern hostname begins with `*.`, then it matches only all subhosts.
-
-    `*example.com/` matches `https://example.com/` and `https://www.example.com/`
-
-    `*.example.com/` matches `https://www.example.com/` but not `https://example.com/`
-
-#### Paths may optionally end with `*`
-
-If a route pattern path ends with `*`, then it matches all suffixes of that path.
-
-    `https://example.com/path*` matches `https://example.com/path` and `https://example.com/path2` and `https://example.com/path/readme.txt`
-
-    `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
 
 ## Configuration options
 
@@ -161,9 +108,9 @@ staging environments.
 
 ```javascript
 const overrideApplicationId = moesifEvent => {
-  return moesifEvent.request.uri.startsWith('https://stg.acmeinc.com')
-    ? '<< MOESIF APP ID FOR STAGING APP >>'
-    : '<< MOESIF APP ID FOR PROD APP >>';
+  return moesifEvent.request.uri.startsWith('https://staging.acmeinc.com')
+    ? 'Your Moesif Application Id for Staging'
+    : 'Your Moesif Application Id for Production'
 };
 ```
 
@@ -325,6 +272,80 @@ const maskContent = moesifEvent => {
 }
 
 ```
+
+## Troubleshooting
+
+### Timeout errors
+Your worker code should register a function that calls `event.respondWith` to ensure a response is returned. 
+Moesif will not return the response directly. 
+
+```javascript
+// Add Moesif handler from top of `MoesifWorker.js` file
+addEventListener('fetch', event => {
+  logRequest(event);
+});
+
+// Sample hello world app
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+  return new Response('hello world', {status: 200})
+}
+
+// Rest of `MoesifWorker.js` file
+```
+
+### Requests not being logged
+If you installed via the custom install with Cloudflare Workers, then you need to set the route pattern to ensure the worker is active for the correct routes. Cloudflare has [very specific rules](https://developers.cloudflare.com/workers/about/routes/) for the route pattens. 
+
+The most common mistake is that a route pattern `*.acmeinc.com/*` matches only subdomains of acmeinc.com, but will not match `https://acmeinc.com`. 
+The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
+
+_The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
+
+### Responses not being logged
+If you override the response in your worker code via `event.respondWith`, Moesif is unable to log the response due to the inherent design of Cloudflare workers. 
+We recommend a [different integration](https://www.moesif.com/docs/server-integration/) if you require this.
+
+### There are duplicate requests logged
+The integration logs both the incoming requests into your CloudFlare worker and also the outgoing requests to your origin server. 
+You can filter on type of API traffic within Moesif UI via the `direction` flag. 
+To disable logging incoming or outgoing API calls, set the option `logIncomingRequests` or `logIncomingRequests` to false. 
+
+#### Route patterns must include your zone
+
+If your zone is example.com, then the simplest possible route pattern you can have is example.com, which would match `http://example.com/` and `https://example.com/`, and nothing else. As with a URL, there is an implied path of `/` if you do not specify one.
+
+#### Route patterns may not contain any query parameters
+
+For example, `https://example.com/?anything` is not a valid route pattern.
+
+#### Route patterns may optionally begin with `http://` or `https://`
+
+If you omit a scheme in your route pattern, it will match both `http://` and `https://` URLs. If you include `http://` or `https://`, it will only match HTTP or HTTPS requests, respectively.
+
+    `https`://*.example.com/` matches `https://www.example.com/` but not `http://www.example.com/`
+
+    `*.example.com/` matches both `https`://www.example.com/` and `http://www.example.com/`.
+
+#### Hostnames may optionally begin with `*`
+
+If a route pattern hostname begins with `*`, then it matches the host and all subhosts. If a route pattern hostname begins with `*.`, then it matches only all subhosts.
+
+    `*example.com/` matches `https://example.com/` and `https://www.example.com/`
+
+    `*.example.com/` matches `https://www.example.com/` but not `https://example.com/`
+
+#### Paths may optionally end with `*`
+
+If a route pattern path ends with `*`, then it matches all suffixes of that path.
+
+    `https://example.com/path*` matches `https://example.com/path` and `https://example.com/path2` and `https://example.com/path/readme.txt`
+
+    `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
+
 
 For more documentation regarding on these fields,
 see below or the [Moesif API Reference](https://www.moesif.com/docs/api?javascript#create-an-event).
