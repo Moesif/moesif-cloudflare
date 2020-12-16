@@ -30,7 +30,7 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
      * MOESIF_INSTALL
      * Set Your Moesif Application Id
     *********************************/
-    "appId": "",
+    "applicationId": "",
 
     // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead. 
     "userIdHeader": "",
@@ -60,7 +60,7 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
 }
 
 let {
-  appId,
+  applicationId,
   hideCreditCards,
   disableTransactionId,
   sessionTokenHeader,
@@ -116,19 +116,19 @@ if (typeof INSTALL_PRODUCT === 'undefined') {
   INSTALL_PRODUCT = undefined;
 }
 
-urlPatterns = urlPatterns.map(({ appId, regex }) => {
+urlPatterns = urlPatterns.map(({ applicationId, regex }) => {
   try {
     return {
       regex: new RegExp(regex),
-      appId
+      applicationId
     };
   } catch (e) {
     console.error(e);
   }
 }).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
 
-if (!appId && urlPatterns.length === 0) {
-  console.error('Cannot track events. No App ID or valid URL Pattern specified.');
+if (!applicationId && urlPatterns.length === 0) {
+  console.error('Cannot log API calls. No Moesif Application Id or valid URL Patterns specified.');
 }
 
 const overrideApplicationId = moesifEvent => {
@@ -136,8 +136,8 @@ const overrideApplicationId = moesifEvent => {
   const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
 
   return pattern
-    ? pattern.appId // may be an empty string, which means don't track this
-    : appId;
+    ? pattern.applicationId // may be an empty string, which means don't track this
+    : applicationId;
 };
 
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
@@ -145,7 +145,7 @@ let batchRunning = false;
 let jobs = [];
 
 function isMoesif(request) {
-  return request.url.indexOf('https://api.moesif.net') !== -1;
+  return request.url.indexOf('moesif.net') !== -1;
 }
 
 function sleep(ms) {
@@ -318,7 +318,7 @@ async function makeMoesifEvent(request, response, before, after, txId) {
       headers: headersToObject(request.headers),
       ip_address: request.headers.get('cf-connecting-ip')
     },
-    response: {
+    response: response.isEmpty ? undefined : {
       time: after,
       body: responseBody ? doHideCreditCards(responseBody) : undefined,
       status: response.status,
@@ -354,36 +354,40 @@ function batch() {
   moesifLog(`batch start`)
 
   if (jobs.length > 0) {
-    const appIdMap = {};
+    const applicationIdMap = {};
     moesifLog(`batch has jobs`)
 
-    jobs.forEach(({ applicationId, moesifEvent }) => {
-      if (!(applicationId in appIdMap)) {
-        appIdMap[applicationId] = [];
+    jobs.forEach(({ appId, moesifEvent }) => {
+      if (!(appId in applicationIdMap)) {
+        applicationIdMap[appId] = [];
       }
       
       if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) || 
           (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
-        appIdMap[applicationId].push(moesifEvent);
+        applicationIdMap[appId].push(moesifEvent);
       }
     });
 
     let promises = [];
 
-    Object.keys(appIdMap).forEach(applicationId => {
-      const body = JSON.stringify(appIdMap[applicationId]);
+    Object.keys(applicationIdMap).forEach(appId => {
+
+      const moesifHeaders = {
+        'Accept': 'application/json; charset=utf-8',
+        'X-Moesif-Application-Id': appId,
+        'User-Agent': 'moesif-cloudflare',
+        'X-Moesif-Cf-Install-Id': INSTALL_ID,          
+        'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
+        'X-Moesif-Cf-Install-Type': INSTALL_TYPE,
+      }
+      moesifLog(JSON.stringify(moesifHeaders));
+      
+      const body = JSON.stringify(applicationIdMap[appId]);
       moesifLog(body);
 
       const options = {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json; charset=utf-8',
-          'X-Moesif-Application-Id': applicationId,
-          'User-Agent': 'moesif-cloudflare',
-          'X-Moesif-Cf-Install-Id': INSTALL_ID,          
-          'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
-          'X-Moesif-Cf-Install-Type': INSTALL_TYPE,
-        },
+        headers: moesifHeaders,
         body: body
       };
 
@@ -401,15 +405,15 @@ async function tryTrackRequest(event, request, response, before, after, txId) {
     moesifLog(`tryTrackRequest start url=${request.url}`)
 
     const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
-    const applicationId = runHook(() => overrideApplicationId(moesifEvent), 'overrideApplicationId', appId);
+    const appId = runHook(() => overrideApplicationId(moesifEvent), 'overrideApplicationId', applicationId);
     event.waitUntil(moesifEvent);
 
-    if (applicationId) {
+    if (appId) {
       // only track this if there's an associated applicationId
       // services may want to not report certain requests
 
       jobs.push({
-        applicationId,
+        appId,
         moesifEvent
       });
 
