@@ -80,6 +80,8 @@ INSTALL_OPTIONS = {
     "logOutgoingRequests": true,
 
     // Print debug messages to console
+    "debug": false
+
 };
 ```
 
