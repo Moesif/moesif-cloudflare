@@ -320,7 +320,8 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
       status: response.status,
       headers: headersToObject(response.headers),
     },
-    direction: response.isEmpty ? 'Incoming' : 'Outgoing' 
+    direction: response.isEmpty ? 'Incoming' : 'Outgoing',
+    weight: 1
   };
 
   moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
