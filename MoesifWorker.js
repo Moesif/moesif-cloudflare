@@ -107,6 +107,7 @@ const maskContent = moesifEvent => {
 const MAX_REQUESTS_PER_BATCH = 10;
 const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
+let samplingPercentage = 100;
 
 if (typeof INSTALL_ID === 'undefined') {
   INSTALL_ID = undefined;
@@ -141,6 +142,11 @@ const overrideApplicationId = moesifEvent => {
 };
 
 const BATCH_URL = 'https://api.moesif.net/v1/events/batch';
+const APP_CONFIG_URL = 'https://api.moesif.net/v1/config';
+let appConfig = null;
+let isAppConfigFetched = false;
+let lastUpdatedAppConfigTime = null;
+const fetchAppConfigTimeDeltaInMins = 60000;
 let batchRunning = false;
 let jobs = [];
 
@@ -266,32 +272,22 @@ function uuid4() {
   return uuid;
 }
 
-async function makeMoesifEvent(request, response, before, after, txId) {
+async function makeMoesifEvent(request, response, before, after, txId, requestBody, userId, companyId) {
   moesifLog(`makeMoesifEvent start`)
   moesifLog(JSON.stringify({request: request, response: response}));
 
   const [
-    requestBody,
     responseBody
   ] = await Promise.all([
-    request.clone().text(),
     // the worker later reads the response body
     // since reading the stream twice creates an error,
     // let's clone `response`
     response && response.clone ? response.clone().text() : Promise.resolve(undefined)
   ]);
   const moesifEvent = {
-    userId: runHook(
-      () => identifyUser(request, response),
-      'identifyUser',
-      undefined
-    ),
+    userId: userId,
 
-    companyId: runHook(
-      () => identifyCompany(request, response),
-      'identifyCompany',
-      undefined
-    ),
+    companyId: companyId,
 
     sessionToken: runHook(
       () => getSessionToken(request, response),
@@ -334,6 +330,57 @@ async function makeMoesifEvent(request, response, before, after, txId) {
     'maskContent',
     moesifEvent
   );
+}
+
+function getSamplingPercentage(userId, companyId) {
+  try {
+    if (appConfig) {
+      if ("user_sample_rate" in appConfig && userId in appConfig["user_sample_rate"]) {
+        return appConfig["user_sample_rate"][userId];
+      }
+      else if ("company_sample_rate" in appConfig && companyId in appConfig["company_sample_rate"]) {
+        return appConfig["company_sample_rate"][companyId];
+      }
+      else if ("sample_rate" in appConfig) {
+        return appConfig["sample_rate"];
+      }
+    }
+    return 100;
+  } catch (error) {
+    moesifLog(`Error while getting sampling percentage`)
+    moesifLog(error)
+    return 100;
+  }
+}
+
+async function readAppConfigResponse(response) {
+  const { headers } = response
+  const contentType = headers.get("content-type") || ""
+  if (contentType.includes("application/json")) {
+    return await response.json();
+  }
+  else {
+    return null;
+  }
+}
+
+async function fetchAppConfig() {
+  moesifLog(`fetchAppConfig start`)
+
+  const moesifHeaders = {
+    'X-Moesif-Application-Id': applicationId
+  }
+
+  const options = {
+    method: 'GET',
+    headers: moesifHeaders
+  };
+
+  const response = await fetch(APP_CONFIG_URL, options)
+
+  appConfig = await readAppConfigResponse(response)
+
+  isAppConfigFetched = true;
 }
 
 async function handleBatch() {
@@ -400,11 +447,11 @@ function batch() {
   }
 }
 
-async function tryTrackRequest(event, request, response, before, after, txId) {
+async function tryTrackRequest(event, request, response, before, after, txId, requestBody, userId, companyId) {
   if (!isMoesif(request) && !runHook(() => skip(request, response), 'skip', false)) {
     moesifLog(`tryTrackRequest start url=${request.url}`)
 
-    const moesifEvent = await makeMoesifEvent(request, response, before, after, txId);
+    const moesifEvent = await makeMoesifEvent(request, response, before, after, txId, requestBody, userId, companyId);
     const appId = runHook(() => overrideApplicationId(moesifEvent), 'overrideApplicationId', applicationId);
     event.waitUntil(moesifEvent);
 
@@ -448,6 +495,13 @@ async function logRequest(event) {
     return;
   }
 
+  var randomNumber = Math.random() * 100;
+  // Fetch app Config first time or if not fetched within last 5 mins
+  if (!isAppConfigFetched || lastUpdatedAppConfigTime == null || new Date().getTime() > lastUpdatedAppConfigTime + fetchAppConfigTimeDeltaInMins ) {
+    lastUpdatedAppConfigTime = new Date().getTime();
+    event.waitUntil(fetchAppConfig());
+  }
+
   const request = event.request.clone();
   request._logged = true;
   event.request._logged = true;
@@ -457,6 +511,9 @@ async function logRequest(event) {
   const before = new Date();
   // use a cloned request so the read buffer isn't locked
   // when we inspect the request body later
+
+  // Read request body
+  const requestBody = await event.request.clone().text()
 
   const race = Promise.race([
     fetch(request),
@@ -471,25 +528,49 @@ async function logRequest(event) {
   } else {
     moesifLog('No response logged');
   }
-  const after = new Date();
-  const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
-  event.waitUntil(
-    tryTrackRequest(
-      event,
-      request,
-      (response ? response : new EmptyResponse()),
-      before,
-      after,
-      txId
-    )
+  let userId = null;
+  userId = runHook(
+    () => identifyUser(request, response),
+    'identifyUser',
+    undefined
   );
 
-  if (!disableTransactionId && response && response.body) {
-    const responseClone = new Response(response.body, response);
-    responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
-    return responseClone;
-  } else {
+  let companyId = null;
+  companyId = runHook(
+    () => identifyCompany(request, response),
+    'identifyCompany',
+    undefined
+  );
+
+  samplingPercentage = getSamplingPercentage(userId, companyId);
+  if (randomNumber > samplingPercentage) {
+    moesifLog('Skip sending event to Moesif due to sampling percentage');
     return response;
+  } else {
+    const after = new Date();
+    const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
+  
+    event.waitUntil(
+      tryTrackRequest(
+        event,
+        request,
+        (response ? response : new EmptyResponse()),
+        before,
+        after,
+        txId,
+        requestBody,
+        userId, 
+        companyId
+      )
+    );
+  
+    if (!disableTransactionId && response && response.body) {
+      const responseClone = new Response(response.body, response);
+      responseClone.headers.set(TRANSACTION_ID_HEADER, txId);
+      return responseClone;
+    } else {
+      return response;
+    }
   }
 }
