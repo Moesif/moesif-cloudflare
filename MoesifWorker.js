@@ -146,7 +146,7 @@ const APP_CONFIG_URL = 'https://api.moesif.net/v1/config';
 let appConfig = null;
 let isAppConfigFetched = false;
 let lastUpdatedAppConfigTime = null;
-const fetchAppConfigTimeDeltaInMins = 60000;
+const fetchAppConfigTimeDeltaInMins = 300000;
 let batchRunning = false;
 let jobs = [];
 
@@ -321,7 +321,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
       headers: headersToObject(response.headers),
     },
     direction: response.isEmpty ? 'Incoming' : 'Outgoing',
-    weight: 1
+    weight: samplingPercentage === 0 ? 1 : Math.floor(100 / samplingPercentage)
   };
 
   moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
