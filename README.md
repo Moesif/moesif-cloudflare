@@ -348,6 +348,8 @@ If a route pattern path ends with `*`, then it matches all suffixes of that path
 
     `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
 
+#### Response status and body not captured when using Workers in Playground
+When using the Cloudflare Workers in the Playground, you woud see Moesif will log an event with no response status and no response body. This is expected when using Playground because due to the inherent design of Cloudflare workers you've to use `respondWith()` to intercepts the event, promising to return the result of the handleRequest function to the client. So, it'll be unable to act as an origin server which prevents Moesif to capture api call made from the Cloudflare to the origin server. Please note: This will only happen when working in Playground, incase of origin server defined, Moesif will capture api call from client to Cloudflare worker and Cloudflare worker to the origin server.
 
 For more documentation regarding on these fields,
 see below or the [Moesif API Reference](https://www.moesif.com/docs/api?javascript#create-an-event).
@@ -378,7 +380,7 @@ metadata | false | A JSON Object consisting of any custom metadata to be stored 
 
 See [Deploying Workers](https://developers.cloudflare.com/workers/deploying-workers/) for other alternatives for setting up Cloudflare workers.
 
-To view more more documentation on integration options, please visit __[the Integration Options Documentation](https://www.moesif.com/docs/getting-started/integration-options/).__
+To view more documentation on integration options, please visit __[the Integration Options Documentation](https://www.moesif.com/docs/getting-started/integration-options/).__
 
 [ico-license]: https://img.shields.io/badge/License-Apache%202.0-green.svg
 [ico-source]: https://img.shields.io/github/last-commit/moesif/moesif-cloudflare.svg?style=social
