@@ -9,12 +9,11 @@
 * This line should be called before any other event listeners in your application
 **************************/
 addEventListener('fetch', event => {
-  event.waitUntil(logRequest(event));
+  event.respondWith(logRequest(event));
 });
 
 /***********************
  * MOESIF_INSTALL
- * Main MoesifWorker.js
 ************************/
 
 // this value is defined automatically by the Cloudflare App framework
@@ -72,6 +71,15 @@ let {
   debug
 } = INSTALL_OPTIONS;
 
+/****
+ * sample urlPattern (optional)
+urlPatterns = [
+  {"applicationId" : "<Moesif AppId 1>", "regex": "^https://stating.my.domain/hello"},
+  {"applicationId" : "<Moesif AppId 2>", "regex": "^https://experiment.my.domain/hello"},
+  {"applicationId" : "",                 "regex": "^https://www.my.domain/hello"}
+]
+****/
+
 /*********************
  * MOESIF_INSTALL
  * Configuration hooks
@@ -117,7 +125,9 @@ if (typeof INSTALL_PRODUCT === 'undefined') {
   INSTALL_PRODUCT = undefined;
 }
 
-urlPatterns = urlPatterns.map(({ applicationId, regex }) => {
+let appIdUrlRegexArr = urlPatterns
+.filter(x => x && (x.regex || x.applicationId)) // appId / urlRegEx both empty
+.map(({ regex, applicationId }) => {
   try {
     return {
       regex: new RegExp(regex),
@@ -126,18 +136,19 @@ urlPatterns = urlPatterns.map(({ applicationId, regex }) => {
   } catch (e) {
     console.error(e);
   }
-}).filter(x => x && x.regex); // filter invalid regular expressions / blank entries
+})
+.filter(x => x && x.regex); // filter invalid regular expressions / blank entries
 
-if (!applicationId && urlPatterns.length === 0) {
+if (!applicationId && appIdUrlRegexArr.length === 0) {
   console.error('Cannot log API calls. No Moesif Application Id or valid URL Patterns specified.');
 }
 
 const overrideApplicationId = moesifEvent => {
   // you may want to use a different app ID based on the request being made
-  const pattern = urlPatterns.find(({ regex }) => regex.test(moesifEvent.request.uri));
+  const appIdUrlRegex = appIdUrlRegexArr.find(({ regex }) => regex.test(moesifEvent.request.uri));
 
-  return pattern
-    ? pattern.applicationId // may be an empty string, which means don't track this
+  return appIdUrlRegex
+    ? appIdUrlRegex.applicationId // may be an empty string, which means don't track this
     : applicationId;
 };
 

@@ -1,0 +1,13 @@
+{
+    "purpose": "This file is used by wrangler to deploy",
+    "private": true,
+    "main": "./src/index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "format": "prettier --write '**/*.{js,css,json,md}'"
+    },
+    "devDependencies": {
+      "prettier": "^1.18.2"
+    }
+  }
+  
