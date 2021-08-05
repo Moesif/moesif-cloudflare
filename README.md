@@ -27,8 +27,8 @@ After signing up for a Moesif account, your Moesif Application Id will be displa
 2. Select `Manage Workers` > `Create a Worker`
 3. In the `Script` window, replace the pre-populated code with the contents of the Moesif worker [src/index.js](src/index.js) to your worker.
 4. Required - Add the Moesif Application Id: Either `a` or `b` or both
-..a. [Recommended ] Update `"INSTALL_OPTIONS.applicationId": "",` to use single `Moesif Application Id` for entire site
-..b. [Optional - advanced use] Update `INSTALL_OPTIONS.urlPatterns`, for finer grained control over using multiple Moesif Application Ids and customized routes
+* a. [Recommended ] Update `"INSTALL_OPTIONS.applicationId": "",` to use single `Moesif Application Id` for entire site
+* b. [Optional - advanced use] Update `INSTALL_OPTIONS.urlPatterns`, for finer grained control over using multiple Moesif Application Ids and customized routes
 5. Name of new worker: Cloudflare auto-generates a random name for new worker such as `gentle-unit-7e11`. You may choose to rename it to something friendly like `moesif-api-analytics-logger`
 
 ### 2. Set the Route for the newly created Worker
