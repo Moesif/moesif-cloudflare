@@ -1,0 +1,7 @@
+name = "moesif-api-analytics-logger"
+type = "javascript"
+
+account_id = "<enter cloudflare account id from cloudflare dashboard>"
+zone_id = "<enter cloudflare zone id>"
+workers_dev = false
+routes = ["<add route(s) here such as staging.mydomain.xyyz/api/v1* >"]
