@@ -50,7 +50,10 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     // Log incoming API calls hitting your Cloudflare Worker
     "logIncomingRequests": true,
 
-    // Log outgoing calls to your origin server from your Cloudflare Worker
+    // Log response from your origin server
+    // This is a misnomer when we was using 'waitUtil'.
+    // now since we are using "respondWith", this must be set to
+    // true in order for response to be logged.
     "logOutgoingRequests": true,
 
     // Print debug messages to console
