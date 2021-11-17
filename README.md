@@ -46,7 +46,7 @@ The API calls should show up in Moesif event stream.
 
 ## [Alternative] Install via Cloudflare Workers (Custom install) using `wrangler` CLI
 Using `Cloudflare/Wrangler` CLI allows for automated install using `wrangler publish`, as well as view/`tail` using `wrangler tail` command
-* Visit [WRANGLER.md](WRANGLER.md) for details.
+* Visit [WRANGLER.md](https://github.com/Moesif/moesif-cloudflare/blob/master/WRANGLER.md) for details.
 
 
 ## Advanced Usage
