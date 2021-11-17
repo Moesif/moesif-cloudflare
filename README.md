@@ -320,15 +320,6 @@ The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
 
 _The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
 
-### Responses not being logged
-If you override the response in your worker code via `event.respondWith`, Moesif is unable to log the response due to the inherent design of Cloudflare workers.
-We recommend a [different integration](https://www.moesif.com/docs/server-integration/) if you require this.
-
-### There are duplicate requests logged
-The integration logs both the incoming requests into your CloudFlare worker and also the outgoing requests to your origin server.
-You can filter on type of API traffic within Moesif UI via the `direction` flag.
-To disable logging incoming or outgoing API calls, set the option `logIncomingRequests` or `logOutgoingRequests` to false.
-
 #### Route patterns must include your zone
 
 If your zone is example.com, then the simplest possible route pattern you can have is example.com, which would match `http://example.com/` and `https://example.com/`, and nothing else. As with a URL, there is an implied path of `/` if you do not specify one.
@@ -362,7 +353,7 @@ If a route pattern path ends with `*`, then it matches all suffixes of that path
     `https://example.com/path/*` matches `https://example.com/path/readme.txt` but not `https://example.com/path2`.
 
 #### Response status and body not captured when using Workers in Playground
-When using the Cloudflare Workers in the Playground, you woud see Moesif will log an event with no response status and no response body. This is expected when using Playground because due to the inherent design of Cloudflare workers you've to use `respondWith()` to intercepts the event, promising to return the result of the handleRequest function to the client. So, it'll be unable to act as an origin server which prevents Moesif to capture api call made from the Cloudflare to the origin server. Please note: This will only happen when working in Playground, incase of origin server defined, Moesif will capture api call from client to Cloudflare worker and Cloudflare worker to the origin server.
+When using the Cloudflare Workers in the Playground, you would see Moesif will log an event with no response status and no response body. This is expected when using Playground because due to the inherent design of Cloudflare workers you've to use `respondWith()` to intercepts the event, promising to return the result of the handleRequest function to the client. So, it'll be unable to act as an origin server which prevents Moesif to capture api call made from the Cloudflare to the origin server. Please note: This will only happen when working in Playground, incase of origin server defined, Moesif will capture api call from client to Cloudflare worker and Cloudflare worker to the origin server.
 
 For more documentation regarding on these fields,
 see below or the [Moesif API Reference](https://www.moesif.com/docs/api?javascript#create-an-event).
