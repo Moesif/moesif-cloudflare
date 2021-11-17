@@ -9,6 +9,7 @@
 * This line should be called before any other event listeners in your application
 **************************/
 addEventListener('fetch', event => {
+  event.passThroughOnException();
   event.respondWith(logRequest(event));
 });
 
@@ -31,7 +32,7 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     *********************************/
     "applicationId": "",
 
-    // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead. 
+    // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead.
     "userIdHeader": "",
 
     // Only used by CloudFlare App Worker Framework. Modify identifyCompany() function instead.
@@ -336,7 +337,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
   };
 
   moesifEvent.request.headers[TRANSACTION_ID_HEADER] = txId;
-  
+
   return runHook(
     () => maskContent(moesifEvent),
     'maskContent',
@@ -420,8 +421,8 @@ function batch() {
       if (!(appId in applicationIdMap)) {
         applicationIdMap[appId] = [];
       }
-      
-      if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) || 
+
+      if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) ||
           (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
         applicationIdMap[appId].push(moesifEvent);
       }
@@ -435,12 +436,12 @@ function batch() {
         'Accept': 'application/json; charset=utf-8',
         'X-Moesif-Application-Id': appId,
         'User-Agent': 'moesif-cloudflare',
-        'X-Moesif-Cf-Install-Id': INSTALL_ID,          
+        'X-Moesif-Cf-Install-Id': INSTALL_ID,
         'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
         'X-Moesif-Cf-Install-Type': INSTALL_TYPE,
       }
       moesifLog(JSON.stringify(moesifHeaders));
-      
+
       const body = JSON.stringify(applicationIdMap[appId]);
       moesifLog(body);
 
@@ -452,7 +453,7 @@ function batch() {
 
       promises.push(fetch(BATCH_URL, options));
     });
-    
+
     jobs = [];
 
     return Promise.all(promises);
@@ -562,7 +563,7 @@ async function logRequest(event) {
   } else {
     const after = new Date();
     const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
-  
+
     event.waitUntil(
       tryTrackRequest(
         event,
@@ -572,11 +573,11 @@ async function logRequest(event) {
         after,
         txId,
         requestBody,
-        userId, 
+        userId,
         companyId
       )
     );
-  
+
     if (!disableTransactionId && response && response.body) {
       const responseClone = new Response(response.body, response);
       responseClone.headers.set(TRANSACTION_ID_HEADER, txId);

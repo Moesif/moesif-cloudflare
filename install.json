@@ -17,14 +17,14 @@
       "userIdHeader": {
         "order": 20,
         "title": "Request or Response header name to identify users",
-        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/companies/'>Company Profiles</a>.",
+        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/users/'>User Profiles</a>.",
         "type": "string",
         "default": ""
       },
       "companyIdHeader": {
         "order": 40,
         "title": "Request or Response header name to identify companies",
-        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/users/'>User Profiles</a>.",
+        "description": "Optional<br>For more info, see <a href='https://www.moesif.com/docs/getting-started/companies/'>Company Profiles</a>.",
         "type": "string",
         "default": ""
       },
@@ -82,7 +82,7 @@
       "logOutgoingRequests": {
         "order": 80,
         "title": "Log Outgoing API Requests",
-        "description": "Log outgoing calls to your origin server from your Cloudflare Worker.",
+        "description": "Log responses from your origin server.",
         "type": "boolean",
         "default": true
       },
