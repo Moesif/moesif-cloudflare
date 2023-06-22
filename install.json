@@ -75,14 +75,14 @@
       "logIncomingRequests": {
         "order": 75,
         "title": "Log Incoming API Requests",
-        "description": "Log incoming API calls hitting your Cloudflare Worker.",
+        "description": "Log incoming API requests hitting your Cloudflare Worker. Enable only when you're testing within the Cloudflare Playground as no origin server is present. Does not capture response.",
         "type": "boolean",
-        "default": true
+        "default": false
       },
       "logOutgoingRequests": {
         "order": 80,
-        "title": "Log Outgoing API Requests",
-        "description": "Log responses from your origin server.",
+        "title": "Log Outgoing API Requests and Responses",
+        "description": "Log requests to your origin server. Should always be enabled except for special cases. Has no effect when running in Cloudflare Playground",
         "type": "boolean",
         "default": true
       },
