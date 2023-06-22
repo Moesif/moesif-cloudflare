@@ -3,7 +3,7 @@
 [![Software License][ico-license]][link-license]
 [![Source Code][ico-source]][link-source]
 
-[Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) automatically logs API calls to [Moesif](https://www.moesif.com) for API analytics and monitoring.
+[Moesif Cloudflare app](https://www.cloudflare.com/apps/moesif) to automatically log API traffic to [Moesif](https://www.moesif.com) for API analytics and monetization platform.
 [Source Code on GitHub](https://github.com/moesif/moesif-cloudflare)
 
 
@@ -21,6 +21,10 @@ After signing up for a Moesif account, your Moesif Application Id will be displa
 
 ## Install via Cloudflare Workers (Custom install) using Cloudflare Dashboard
 
+The Cloudflare Playground lacks an origin server so `logOutgoingRequests` has no effect. As a workaround for testing, you can temporarily set `logIncomingRequests` to true.
+Mo API response will be logged, but you can at least verify basic functionality. Once you release to production (where an origin server exists), ensure you revert `logIncomingRequests` back to false to avoid duplicate events being logged.
+{: .text-center .notice--warning}
+
 ### 1. Create new Worker using Moesif Javascript code
 
 1. Go to [Cloudflare Workers Dashboard](https://dash.cloudflare.com/workers).
@@ -37,12 +41,16 @@ After signing up for a Moesif account, your Moesif Application Id will be displa
 * `Worker`: Select the worker created above.
 * Save.
 
-#### Try it!
+### 3. Try it!
 Just visit your link on cloudflare using your web browser `https://my-cloudflare-domain/my-path` or
 ```bash
 curl https://my-cloudflare-domain/my-path
 ```
-The API calls should show up in Moesif event stream.
+The API calls should show up in Moesif event stream. For testing in the Cloudflare Playground, the response may be empty due to lack of origin server.
+
+### 4. Disable `logIncomingRequests` for production
+
+Once you release to production (where an origin server exists), ensure you set `logIncomingRequests` back to false. Otherwise, you might have duplicate events where one has no response.
 
 ## [Alternative] Install via Cloudflare Workers (Custom install) using `wrangler` CLI
 Using `Cloudflare/Wrangler` CLI allows for automated install using `wrangler publish`, as well as view/`tail` using `wrangler tail` command
@@ -68,42 +76,12 @@ A blank `applicationId` in `urlPatterns` will result in use of default `INSTALL_
 2. Customizing `addEventListener` to work with other unrelated 3rd party `Cloudflare Apps` or other advanced worker scenarios
 Advanced scenarios are not discussed here. However, when working with other apps or workers, you may need to replace `event.respondWith(logRequest(event));` with `event.waitUntil(logRequest(event));`
 
-3. Additional options are below:
+1. Configure install options
 
-```javascript
-INSTALL_OPTIONS = {
-    // Your Moesif Application Id
-    "applicationId": "Your Moesif Application Id",
+Install options can be found in two places:
 
-    // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead.
-    "userIdHeader": "",
-
-    // Only used by CloudFlare App Worker Framework. Modify identifyCompany() function instead.
-    "companyIdHeader": "",
-
-    // Only used by CloudFlare App Worker Framework. Modify getSessionToken() function instead.
-    "sessionTokenHeader": "",
-
-    // true or false
-    "hideCreditCards": true,
-
-    // set to true to prevent insertion of X-Moesif-Transaction-Id
-    "disableTransactionId": false,
-
-    // Log incoming API calls hitting your Cloudflare Worker
-    "logIncomingRequests": true,
-
-    // Log outgoing calls to your origin server from your Cloudflare Worker
-    "logOutgoingRequests": true,
-
-    // Print debug messages to console
-    "debug": false
-
-};
-```
-
-Besides the static fields in `INSTALL_OPTIONS`, you can also override the functions hooks like `identifyUser` and `skip`.
-Just search for `Configuration hooks` in the `src/index.js` file.
+1. Static options are present in the `INSTALL_OPTIONS` dictionary at top of file
+2. Configuration hooks (to implement logic for functions like `identifyUser`) can be found right after the `INSTALL_OPTIONS`  dictionary. Just search for `Configuration hooks` in the `src/index.js` file.
 
 ### Configuration options
 
@@ -318,7 +296,17 @@ If you installed via the custom install with Cloudflare Workers, then you need t
 The most common mistake is that a route pattern `*.acmeinc.com/*` matches only subdomains of acmeinc.com, but will not match `https://acmeinc.com`.
 The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
 
-_The Cloudflare Editor UI does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
+_The Cloudflare Playground does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
+
+Another mistake is not enabling `logIncomingRequests` when testing Moesif in the Cloudflare Playground. The Playground lacks an origin server so `logOutgoingRequests`  won't work. 
+For testing, you can temporarily set `logIncomingRequests` to true to capture requests earlier in the request lifecycle (Note: responses will be empty). 
+
+For production, make sure you disable `logIncomingRequests` once a real origin server exists to ensure duplicate calls are not logged.  
+
+### There are duplicate requests logged
+The integration logs both the incoming requests into your CloudFlare worker and also the outgoing requests to your origin server.
+For production apps with a proxy route set up, you should have `logIncomingRequests` set to false. Typically `logIncomingRequests` is enabled for testing in the cloudflare sandbox where
+no origin server exists. 
 
 #### Route patterns must include your zone
 

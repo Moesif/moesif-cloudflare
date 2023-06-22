@@ -32,6 +32,16 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     *********************************/
     "applicationId": "",
 
+    // Log incoming requests hitting your Cloudflare Worker. Does not log the responses.
+    // Because logOutgoingRequests does not work within the Cloudflare Sandbox UI, temporarily set `logIncomingRequests` to true for testing.
+    // This ensures you can see events in Moesif for testing.
+    // Disable once deployed to production to avoid logging duplicate events (as a proxy server is present).
+    "logIncomingRequests": true,
+
+    // Log outgoing requests to your origin server and its response
+    // Should always be true except for specific cases.
+    "logOutgoingRequests": true,
+
     // Only used by CloudFlare App Worker Framework. Modify identifyUser() function instead.
     "userIdHeader": "",
 
@@ -42,21 +52,15 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     "sessionTokenHeader": "",
 
     // true or false
+    // This will mask any credit cards by checking for the Luhn algorithm
     "hideCreditCards": true,
 
-    // set to true to prevent insertion of X-Moesif-Transaction-Id
+    // Set to true to prevent insertion of X-Moesif-Transaction-Id response header. 
+    // X-Moesif-Transaction-Id  is helpful for identifying transactions in Moesif.
     "disableTransactionId": false,
 
-    // Log incoming API calls hitting your Cloudflare Worker
-    "logIncomingRequests": true,
-
-    // Log response from your origin server
-    // This is a misnomer when we was using 'waitUtil'.
-    // now since we are using "respondWith", this must be set to
-    // true in order for response to be logged.
-    "logOutgoingRequests": true,
-
-    // Print debug messages to console
+    // Print debug messages to console. 
+    // Enable to share debug logs with Moesif support staff for quicker debug.
     "debug": false
   };
   INSTALL_TYPE = 'custom';
