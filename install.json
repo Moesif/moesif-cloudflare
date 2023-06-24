@@ -92,6 +92,13 @@
         "description": "Print debug messages to console which may be helpful when contacting Moesif support.",
         "type": "boolean",
         "default": false
+      },
+      "fetchTimeoutMS": {
+        "order": 120,
+        "title": "Fetch Timeout milliseconds",
+        "description": "Fetch timeout in milliseconds so that Moesif can log the call even if origin server doesnt respond.",
+        "type": "integer",
+        "default": 120000
       }
     }
   }

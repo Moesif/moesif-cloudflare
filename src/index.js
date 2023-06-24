@@ -61,7 +61,10 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
 
     // Print debug messages to console. 
     // Enable to share debug logs with Moesif support staff for quicker debug.
-    "debug": false
+    "debug": false,
+
+    // Fetch timeout in milliseconds so that Moesif can log the call even if origin server doesnt respond
+    "fetchTimeoutMS": 120000
   };
   INSTALL_TYPE = 'custom';
 }
@@ -76,7 +79,8 @@ let {
   urlPatterns = [],
   logIncomingRequests,
   logOutgoingRequests,
-  debug
+  debug,
+  fetchTimeoutMS
 } = INSTALL_OPTIONS;
 
 /****
@@ -120,10 +124,13 @@ const maskContent = moesifEvent => {
   return moesifEvent;
 };
 
-const MAX_REQUESTS_PER_BATCH = 10;
+const EVENT_QUEUE_SIZE = 100000;    // 100K
+const MAX_REQUESTS_PER_BATCH = 100;
 const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
 let samplingPercentage = 100;
+let MAX_BATCH_WAIT_TIME_MS = 5000; // MS
+let lastBatchSentDate = new Date(new Date() - MAX_BATCH_WAIT_TIME_MS)
 
 if (typeof INSTALL_ID === 'undefined') {
   INSTALL_ID = undefined;
@@ -414,57 +421,102 @@ async function handleBatch() {
     if (jobs.length) await batch();
 
     batchRunning = false;
+    lastBatchSentDate = new Date();
+
   }
 }
 
 function batch() {
-  moesifLog(`batch start`)
+  moesifLog(`batch start`);
 
   if (jobs.length > 0) {
+    const appIdEventsCount = {}; // holds events count for each app id. e.g; {<app-id-1>: 3, <app-id-2>: 343, ..}
     const applicationIdMap = {};
-    moesifLog(`batch has jobs`)
+    // e.g;
+    //  {
+    //     0: {<app-id-1>: [..], <app-id-2>: [..], <app-id-3>: [..], ..},
+    //     1: {<app-id-1>: [..], <app-id-3>: [..], ..},
+    //     ..
+    //   }
+    moesifLog(`batch has jobs`);
 
     jobs.forEach(({ appId, moesifEvent }) => {
-      if (!(appId in applicationIdMap)) {
-        applicationIdMap[appId] = [];
-      }
 
       if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) ||
           (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
-        applicationIdMap[appId].push(moesifEvent);
+
+        // Build batchKey to build batch of events for each appId.
+        // Batch key is built using number of events in an appId. Each batch will have max MAX_REQUESTS_PER_BATCH
+        // events per appId. It will help in prevent starvation of appId with low-count events.
+        // Update event's size info for the appId, which is used to create batch key for grouping.
+        let batchKey = 0;
+        if (appId in appIdEventsCount) {
+          appIdEventsCount[appId] += 1; // increment it.
+          // Determine the batchIndex - which batch this event should be added to.
+          batchKey = Math.floor(appIdEventsCount[appId] / MAX_REQUESTS_PER_BATCH)
+        }
+        else {
+          // appId is seen first time so set it to 1 and init other map
+          appIdEventsCount[appId] = 1; // initialize it.
+          batchKey = 0; // first batch (0-index based).
+        }
+        
+        if (!(batchKey in applicationIdMap)) {
+          applicationIdMap[batchKey] = { }
+        }
+
+        // Add event to app specific batch.
+        try {
+          applicationIdMap[batchKey][appId].push(moesifEvent);    // Add it
+        } catch(e) {
+          // Object does not exist. Add it.
+          applicationIdMap[batchKey][appId] = [moesifEvent]; // Initialize it
+        }
       }
     });
 
-    let promises = [];
+    const promises = [];
+    let batchCounter = 0;
 
-    Object.keys(applicationIdMap).forEach(appId => {
+    Object.keys(applicationIdMap).forEach((batchKey) => {
+      Object.keys(applicationIdMap[batchKey]).forEach((appId) => {
+        const batchEvents = applicationIdMap[batchKey][appId];
 
-      const moesifHeaders = {
-        'Accept': 'application/json; charset=utf-8',
-        'X-Moesif-Application-Id': appId,
-        'User-Agent': 'moesif-cloudflare',
-        'X-Moesif-Cf-Install-Id': INSTALL_ID,
-        'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
-        'X-Moesif-Cf-Install-Type': INSTALL_TYPE,
-      }
-      moesifLog(JSON.stringify(moesifHeaders));
+        if (batchEvents.length) {
+          const moesifHeaders = {
+            'Accept': 'application/json; charset=utf-8',
+            'X-Moesif-Application-Id': appId,
+            'User-Agent': 'moesif-cloudflare',
+            'X-Moesif-Cf-Install-Id': INSTALL_ID,
+            'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
+            'X-Moesif-Cf-Install-Type': INSTALL_TYPE
+          }
+          moesifLog(JSON.stringify(moesifHeaders));
 
-      const body = JSON.stringify(applicationIdMap[appId]);
-      moesifLog(body);
+          const body = JSON.stringify(batchEvents);
+          moesifLog(body);
 
-      const options = {
-        method: 'POST',
-        headers: moesifHeaders,
-        body: body
-      };
+          const options = {
+            method: 'POST',
+            headers: moesifHeaders,
+            body: body
+          };
 
-      promises.push(fetch(BATCH_URL, options));
+          promises.push(fetch(BATCH_URL, options));
+          batchCounter++;
+        }
+      });
     });
 
     jobs = [];
 
+    moesifLog(`Total batches: ${batchCounter}`);
     return Promise.all(promises);
   }
+}
+
+function hasLastBatchSentTimeExpired() {
+  return new Date() - lastBatchSentDate > MAX_BATCH_WAIT_TIME_MS;
 }
 
 async function tryTrackRequest(event, request, response, before, after, txId, requestBody, userId, companyId) {
@@ -479,15 +531,16 @@ async function tryTrackRequest(event, request, response, before, after, txId, re
       // only track this if there's an associated applicationId
       // services may want to not report certain requests
 
-      jobs.push({
-        appId,
-        moesifEvent
-      });
+      if (jobs.length >= EVENT_QUEUE_SIZE) {
+        moesifLog(`Queue is full, skipping new events`)
+      } else {
+        jobs.push({
+          appId,
+          moesifEvent
+        });
+      }
 
-      if (jobs.length >= MAX_REQUESTS_PER_BATCH) {
-        // let's send everything right now
-        event.waitUntil(batch());
-      } else if (!batchRunning) {
+      if (!batchRunning || hasLastBatchSentTimeExpired()) {
         // wait until the next batch job
         // event.waitUntil(sleep(BATCH_DURATION));
         event.waitUntil(handleBatch());
@@ -537,7 +590,7 @@ async function logRequest(event) {
 
   const race = Promise.race([
     fetch(request),
-    sleep(10000),
+    sleep(fetchTimeoutMS),
   ]);
   event.waitUntil(race);
   moesifLog(`logging request url=${request.url}`)
