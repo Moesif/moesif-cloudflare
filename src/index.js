@@ -416,9 +416,6 @@ async function handleBatch() {
   if (!batchRunning) {
 
     await sleep(BATCH_DURATION);
-
-    console.log(`jobs.length in handleBatch: ${jobs.length} `);
-
     if (jobs.length) {
       const jobsForBatching = structuredClone(jobs); // clone it
       jobs.length = 0; // empty the jobs as it's been cloned
