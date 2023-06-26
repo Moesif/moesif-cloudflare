@@ -414,104 +414,100 @@ async function handleBatch() {
   moesifLog(`handleBatch start`)
 
   if (!batchRunning) {
-    batchRunning = true;
 
     await sleep(BATCH_DURATION);
 
-    if (jobs.length) await batch();
+    console.log(`jobs.length in handleBatch: ${jobs.length} `);
 
-    batchRunning = false;
-    lastBatchSentDate = new Date();
-
+    if (jobs.length) {
+      const jobsForBatching = structuredClone(jobs); // clone it
+      jobs.length = 0; // empty the jobs as it's been cloned
+      await batch(jobsForBatching);
+    }
   }
 }
 
-function batch() {
-  moesifLog(`batch start`);
+function batch(jobsForBatching) {
 
-  if (jobs.length > 0) {
-    const appIdEventsCount = {}; // holds events count for each app id. e.g; {<app-id-1>: 3, <app-id-2>: 343, ..}
-    const applicationIdMap = {};
-    // e.g;
-    //  {
-    //     0: {<app-id-1>: [..], <app-id-2>: [..], <app-id-3>: [..], ..},
-    //     1: {<app-id-1>: [..], <app-id-3>: [..], ..},
-    //     ..
-    //   }
-    moesifLog(`batch has jobs`);
+  // ------------------------
+  //      Important
+  // This should be the first statement in the function.
+  // ------------------------
+  batchRunning = true;
 
-    jobs.forEach(({ appId, moesifEvent }) => {
+  moesifLog(`batch start job size ${jobsForBatching.length}`);
 
-      if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) ||
-          (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
+  const applicationIdMap = {};
+  // e.g;
+  // jobs = [
+  //   { "appId": "aid-1" , "moesifEvent": {"direction": "Outgoing" ,  "request" : [1, 2, 3] }    },
+  //   { "appId": "aid-2" , "moesifEvent": {"direction": "Incoming"  , "response": [21, 22, 23] } },
+  //   { "appId": "aid-3" , "moesifEvent": {"direction": "Outgoing"  , "request" : [31, 32, 33] } }
+  // ];
+  moesifLog(`batch has jobs`);
 
-        // Build batchKey to build batch of events for each appId.
-        // Batch key is built using number of events in an appId. Each batch will have max MAX_REQUESTS_PER_BATCH
-        // events per appId. It will help in prevent starvation of appId with low-count events.
-        // Update event's size info for the appId, which is used to create batch key for grouping.
-        let batchKey = 0;
-        if (appId in appIdEventsCount) {
-          appIdEventsCount[appId] += 1; // increment it.
-          // Determine the batchIndex - which batch this event should be added to.
-          batchKey = Math.floor(appIdEventsCount[appId] / MAX_REQUESTS_PER_BATCH)
-        }
-        else {
-          // appId is seen first time so set it to 1 and init other map
-          appIdEventsCount[appId] = 1; // initialize it.
-          batchKey = 0; // first batch (0-index based).
-        }
-        
-        if (!(batchKey in applicationIdMap)) {
-          applicationIdMap[batchKey] = { }
-        }
+  // Group events by appId
+  jobsForBatching.forEach(({ appId, moesifEvent }) => {
 
-        // Add event to app specific batch.
-        try {
-          applicationIdMap[batchKey][appId].push(moesifEvent);    // Add it
-        } catch(e) {
-          // Object does not exist. Add it.
-          applicationIdMap[batchKey][appId] = [moesifEvent]; // Initialize it
-        }
+    if ((moesifEvent.direction === 'Outgoing' && logOutgoingRequests) ||
+        (moesifEvent.direction === 'Incoming' && logIncomingRequests)) {
+
+      // Add event to specific appId.
+      try {
+        applicationIdMap[appId].push(moesifEvent);    // Add it
+      } catch(e) {
+        // Object does not exist. Add it.
+        applicationIdMap[appId] = [moesifEvent]; // Initialize it
       }
-    });
+    }
+  });
 
-    const promises = [];
-    let batchCounter = 0;
+  const promises = [];
+  let batchCounter = 0;
 
-    Object.keys(applicationIdMap).forEach((batchKey) => {
-      Object.keys(applicationIdMap[batchKey]).forEach((appId) => {
-        const batchEvents = applicationIdMap[batchKey][appId];
+  Object.keys(applicationIdMap).forEach((appId) => {
+    const batchEvents = applicationIdMap[appId];
 
-        if (batchEvents.length) {
-          const moesifHeaders = {
-            'Accept': 'application/json; charset=utf-8',
-            'X-Moesif-Application-Id': appId,
-            'User-Agent': 'moesif-cloudflare',
-            'X-Moesif-Cf-Install-Id': INSTALL_ID,
-            'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
-            'X-Moesif-Cf-Install-Type': INSTALL_TYPE
-          }
-          moesifLog(JSON.stringify(moesifHeaders));
+    if (batchEvents.length) {
+      const moesifHeaders = {
+        'Accept': 'application/json; charset=utf-8',
+        'X-Moesif-Application-Id': appId,
+        'User-Agent': 'moesif-cloudflare',
+        'X-Moesif-Cf-Install-Id': INSTALL_ID,
+        'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
+        'X-Moesif-Cf-Install-Type': INSTALL_TYPE
+      }
+      moesifLog(JSON.stringify(moesifHeaders));
 
-          const body = JSON.stringify(batchEvents);
-          moesifLog(body);
+      const body = JSON.stringify(batchEvents);
+      moesifLog(body);
 
-          const options = {
-            method: 'POST',
-            headers: moesifHeaders,
-            body: body
-          };
+      const options = {
+        method: 'POST',
+        headers: moesifHeaders,
+        body: body
+      };
 
-          promises.push(fetch(BATCH_URL, options));
-          batchCounter++;
-        }
-      });
-    });
+      
+      promises.push(fetch(BATCH_URL, options));
+      batchCounter++;
+    }
+  });
+  
+  moesifLog(`Total batches: ${batchCounter}`);
 
-    jobs = [];
+  // ------------------------
+  //      Important
+  // This reset should be the last statement in the function before return.
+  // ------------------------
+  batchRunning = false;
+  lastBatchSentDate = new Date();
 
-    moesifLog(`Total batches: ${batchCounter}`);
-    return Promise.all(promises);
+  if (promises.length) {
+    // Add a sleep/wait promise too - to make sure promise is resolved in max BATCH_DURATION
+    // because we want to use "fire and forget" approach for sending events to moesif.
+    promises.push(sleep(BATCH_DURATION));
+    return Promise.race(promises);
   }
 }
 
@@ -540,7 +536,8 @@ async function tryTrackRequest(event, request, response, before, after, txId, re
         });
       }
 
-      if (!batchRunning || hasLastBatchSentTimeExpired()) {
+      // Log the events to moesif if batch is available or max batch time has expired.
+      if (jobs.length && (jobs.length >= MAX_REQUESTS_PER_BATCH || hasLastBatchSentTimeExpired()) ) {
         // wait until the next batch job
         // event.waitUntil(sleep(BATCH_DURATION));
         event.waitUntil(handleBatch());
