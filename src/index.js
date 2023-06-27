@@ -129,7 +129,7 @@ const MAX_REQUESTS_PER_BATCH = 100;
 const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
 let samplingPercentage = 100;
-let MAX_BATCH_WAIT_TIME_MS = 5000; // MS
+let MAX_BATCH_WAIT_TIME_MS = 1000; // MS
 let lastBatchSentDate = new Date(new Date() - MAX_BATCH_WAIT_TIME_MS)
 
 if (typeof INSTALL_ID === 'undefined') {
