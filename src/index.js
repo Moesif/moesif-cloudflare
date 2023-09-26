@@ -124,7 +124,7 @@ const maskContent = moesifEvent => {
   return moesifEvent;
 };
 
-const EVENT_QUEUE_SIZE = 100000;    // 100K
+const EVENT_QUEUE_SIZE = 500000;    // 500K
 const MAX_REQUESTS_PER_BATCH = 100;
 const BATCH_DURATION = 1000; // ms
 const TRANSACTION_ID_HEADER = 'X-Moesif-Transaction-Id';
