@@ -38,7 +38,17 @@ async function originalFetchHandler(request, env, ctx) {
 }
 
 const moesifOptions = {
-	applicationId: 'Your Moesif Application Id',
+	applicationId: 'Your Application Id',
+  identifyUser: (req, res) => {
+    if (req.headers) {
+      return req.headers.get('X-User-Id');
+    }
+  },
+  identifyCompany: (req, res) => {
+    if (req.headers) {
+      return req.headers.get('X-Company-Id');
+    }
+  }
 };
 
 const wrappedFetchHandler = moesifMiddleware(originalFetchHandler, moesifOptions);

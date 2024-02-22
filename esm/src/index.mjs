@@ -80,7 +80,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 
 			request: {
 				apiVersion: runHook(() => getApiVersion(request, response, _env, ctx), 'getApiVersion', undefined),
-				body: requestBody ? prepareBody(responseBody, { hideCreditCards, maxBodySize: options.requestMaxBodySize }) : undefined,
+				body: requestBody ? prepareBody(requestBody, { hideCreditCards, maxBodySize: options.requestMaxBodySize }) : undefined,
 				time: before,
 				uri: request.url,
 				verb: request.method,
