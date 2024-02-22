@@ -1,7 +1,7 @@
 {
   "name": "moesif-cloudflare",
   "version": "0.0.1",
-  "description": "Moesif API analytics and monetization integration for Cloudflare",
+  "description": "Moesif API analytics and monetization integration for Cloudflare workers",
   "main": "src/index.mjs",
   "keywords": [
     "moesif",
@@ -12,7 +12,8 @@
     "monitoring",
     "trace",
     "analytics",
-    "monetization"
+    "monetization",
+    "cloudflare workers"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
