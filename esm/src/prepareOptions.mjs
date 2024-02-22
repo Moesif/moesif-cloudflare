@@ -1,6 +1,10 @@
 //
 
 const identifyUser = (req, res, env, ctx) => {
+  if (!req.headers) {
+    return undefined;
+  }
+
   const token = req.headers.get('Authorization') || res.headers.get('Authorization');
   if (token) {
     const jwtToken = token.split(' ')[1]; // Assuming the token is in the format "Bearer <token>"
@@ -89,9 +93,6 @@ function makeAppIdUrlRegexArr(urlPatterns) {
 }
 
 function prepareOptions(options) {
-  var INSTALL_OPTIONS;
-  var INSTALL_ID;
-  var INSTALL_PRODUCT;
   var INSTALL_TYPE = 'esm';
 
   if (!options || !options.applicationId) {
