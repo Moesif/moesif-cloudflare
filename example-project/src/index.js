@@ -8,8 +8,8 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-import moesifMiddleware from '../../esm/src/index.mjs';
-// import moesifMiddleware from 'moesif-cloudflare';
+import moesifMiddleware from 'moesif-cloudflare';
+// import moesifMiddleware from '../../esm/src/index.mjs';
 
 async function originalFetchHandler(request, env, ctx) {
 	const url = new URL(request.url);
