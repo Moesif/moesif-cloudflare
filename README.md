@@ -4,7 +4,7 @@ This SDK is for integration [Moesif](https://www.moesif.com) with [Cloudflare Wo
 
 ## Important Note about Legacy Service Worker Model
 
-If you are using Cloudflare's [Service Workers Model instead of the new EsModule](https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/),
+If you are using Cloudflare's [Service Workers API instead of the new EsModule](https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/),
 please follow the [legacy instruction here](/legacy/README.md)
 
 ## Installation
@@ -40,7 +40,7 @@ export default {
 
 ## Options
 
-See full list of options for moesifMiddleware in [prepareOptions.mjs](/esm/src/prepareOptions.mjs);
+See full list of options for moesifMiddleware in [prepareOptions.mjs](/esm/src/prepareOptions.mjs), see `DEFAULT_OPTIONS`;
 
 
 ### Example

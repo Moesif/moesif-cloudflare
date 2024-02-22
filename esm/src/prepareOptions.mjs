@@ -1,4 +1,5 @@
 //
+
 const identifyUser = (req, res, env, ctx) => {
   const token = req.headers.get('Authorization') || res.headers.get('Authorization');
   if (token) {
@@ -34,6 +35,42 @@ const maskContent = (moesifEvent) => {
   return moesifEvent;
 };
 
+const DEFAULT_OPTIONS = {
+  /*********************************
+   * MOESIF_INSTALL
+   * Set Your Moesif Application Id
+   *********************************/
+  applicationId: null, // required
+
+  // log request and response bodies.
+  // for bodies, the middleware splits stream by default to obtain an copy to read from
+  // if you do not read the original request body, you may get a warning that a split was wasted.
+  logBody: true,
+
+  // true or false
+  // This will mask any credit cards by checking for the Luhn algorithm
+  hideCreditCards: true,
+
+  // Set to true to prevent insertion of X-Moesif-Transaction-Id response header.
+  // X-Moesif-Transaction-Id  is helpful for identifying transactions in Moesif.
+  disableTransactionId: false,
+
+  // Print debug messages to console.
+  // Enable to share debug logs with Moesif support staff for quicker debug.
+  debug: false,
+
+  // Fetch timeout in milliseconds so that Moesif can log the call even if origin server doesnt respond
+  fetchTimeoutMS: 120000,
+
+  identifyUser,
+  identifyCompany,
+  getApiVersion,
+  getMetadata,
+  getSessionToken,
+  skip,
+  maskContent,
+};
+
 function makeAppIdUrlRegexArr(urlPatterns) {
   const appIdUrlRegexArr = urlPatterns
     .filter((x) => x && (x.regex || x.applicationId)) // appId / urlRegEx both empty
@@ -55,49 +92,11 @@ function prepareOptions(options) {
   var INSTALL_OPTIONS;
   var INSTALL_ID;
   var INSTALL_PRODUCT;
-  var INSTALL_TYPE = 'app';
+  var INSTALL_TYPE = 'esm';
 
-  if (!options.applicationId) {
+  if (!options || options.applicationId) {
     throw new Error('no moesif application id found');
   }
-
-  const DEFAULT_OPTIONS = {
-    /*********************************
-     * MOESIF_INSTALL
-     * Set Your Moesif Application Id
-     *********************************/
-    applicationId: null, // required
-
-    // log request and response bodies.
-    // for bodies, the middleware splits stream by default to obtain an copy to read from
-    // if you do not read the original request body, you may get a warning that a split was wasted.
-    logBody: true,
-
-    // true or false
-    // This will mask any credit cards by checking for the Luhn algorithm
-    hideCreditCards: true,
-
-    // Set to true to prevent insertion of X-Moesif-Transaction-Id response header.
-    // X-Moesif-Transaction-Id  is helpful for identifying transactions in Moesif.
-    disableTransactionId: false,
-
-    // Print debug messages to console.
-    // Enable to share debug logs with Moesif support staff for quicker debug.
-    debug: true,
-
-    // Fetch timeout in milliseconds so that Moesif can log the call even if origin server doesnt respond
-    fetchTimeoutMS: 120000,
-
-    urlPatterns: [],
-
-    identifyUser,
-    identifyCompany,
-    getApiVersion,
-    getMetadata,
-    getSessionToken,
-    skip,
-    maskContent,
-  };
 
   return {
     INSTALL_TYPE,

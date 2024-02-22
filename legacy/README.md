@@ -1,5 +1,9 @@
 # Moesif Cloudflare App
 
+> Important
+> This is for Cloudflare Legacy App Marketplace and legacy based Service Worker API.
+> If you are using the [new EsModule Approach](https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/) please see main readme of this repo.
+
 [![Software License][ico-license]][link-license]
 [![Source Code][ico-source]][link-source]
 
@@ -298,15 +302,15 @@ The correct route would be `https://acmeinc/*` or `*acmeinc/*`._
 
 _The Cloudflare Playground does not look at the route pattern, so it may look like your worker is configured correctly until you access your API via code._
 
-Another mistake is not enabling `logIncomingRequests` when testing Moesif in the Cloudflare Playground. The Playground lacks an origin server so `logOutgoingRequests`  won't work. 
-For testing, you can temporarily set `logIncomingRequests` to true to capture requests earlier in the request lifecycle (Note: responses will be empty). 
+Another mistake is not enabling `logIncomingRequests` when testing Moesif in the Cloudflare Playground. The Playground lacks an origin server so `logOutgoingRequests`  won't work.
+For testing, you can temporarily set `logIncomingRequests` to true to capture requests earlier in the request lifecycle (Note: responses will be empty).
 
-For production, make sure you disable `logIncomingRequests` once a real origin server exists to ensure duplicate calls are not logged.  
+For production, make sure you disable `logIncomingRequests` once a real origin server exists to ensure duplicate calls are not logged.
 
 ### There are duplicate requests logged
 The integration logs both the incoming requests into your CloudFlare worker and also the outgoing requests to your origin server.
 For production apps with a proxy route set up, you should have `logIncomingRequests` set to false. Typically `logIncomingRequests` is enabled for testing in the cloudflare sandbox where
-no origin server exists. 
+no origin server exists.
 
 #### Route patterns must include your zone
 
