@@ -66,6 +66,10 @@ const DEFAULT_OPTIONS = {
   // Fetch timeout in milliseconds so that Moesif can log the call even if origin server doesnt respond
   fetchTimeoutMS: 120000,
 
+  // limit the size of request and response body send to moesif.
+  requestMaxBodySize: 100000, // 100k
+  responseMaxBodySize: 100000, // 100k
+
   identifyUser,
   identifyCompany,
   getApiVersion,

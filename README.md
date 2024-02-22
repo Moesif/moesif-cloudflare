@@ -2,6 +2,8 @@
 
 This SDK is for integration [Moesif](https://www.moesif.com) with [Cloudflare Workers](https://developers.cloudflare.com/workers/) using the new ES Module Model.
 
+This npm package only support node 18 and 20.
+
 ## Important Note about Legacy Service Worker Model
 
 If you are using Cloudflare's [Service Workers API instead of the new EsModule](https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/),

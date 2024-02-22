@@ -1,4 +1,4 @@
-import { isMoesif, makeLogger, sleep, headersToObject, doHideCreditCards, runHook, uuid4 } from './utils.mjs';
+import { isMoesif, makeLogger, sleep, headersToObject, runHook, uuid4, prepareBody } from './utils.mjs';
 import prepareOptions from './prepareOptions.mjs';
 import Batcher from './batcher.mjs';
 import AppConfig from './appConfig.mjs';
@@ -80,7 +80,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 
 			request: {
 				apiVersion: runHook(() => getApiVersion(request, response, _env, ctx), 'getApiVersion', undefined),
-				body: requestBody ? doHideCreditCards(requestBody, hideCreditCards) : undefined,
+				body: requestBody ? prepareBody(responseBody, { hideCreditCards, maxBodySize: options.requestMaxBodySize }) : undefined,
 				time: before,
 				uri: request.url,
 				verb: request.method,
@@ -91,7 +91,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 				? undefined
 				: {
 						time: after,
-						body: responseBody ? doHideCreditCards(responseBody, hideCreditCards) : undefined,
+						body: responseBody ? prepareBody(responseBody, { hideCreditCards, maxBodySize: options.responseMaxBodySize }) : undefined,
 						status: response.status,
 						headers: headersToObject(response.headers),
 				  },
@@ -189,7 +189,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 
 			ctx.waitUntil(
 				tryTrackRequest(
-          _env,
+					_env,
 					ctx,
 					request,
 					response ? response : new EmptyResponse(),

@@ -119,6 +119,41 @@ function doHideCreditCards(text, hideCreditCards) {
   }
 }
 
+function mightBeJson(str) {
+  var newStr = str.trim();
+  if (newStr.startsWith('{') || newStr.startsWith('[')) {
+    return true;
+  }
+  return false;
+}
+
+function safeParseJson(str) {
+  try {
+    if (mightBeJson(str)) {
+      return JSON.parse(str);
+    }
+    return str;
+  } catch (err) {
+    return str;
+  }
+}
+
+function prepareBody(text, options={}) {
+  if (!text) {
+    return text;
+  }
+
+  if (options.maxBodySize && text.length > options.maxBodySize) {
+    return {
+      "msg": "request body size exceeded options maxBodySize"
+    };
+  }
+
+  const cleanedText = doHideCreditCards(text, options.hideCreditCards);
+
+  return safeParseJson(cleanedText);
+}
+
 function runHook(fn, name, defaultValue) {
   let result = defaultValue;
 
@@ -137,4 +172,4 @@ function runHook(fn, name, defaultValue) {
 }
 
 
-export { isMoesif, makeLogger, sleep, headersToObject, uuid4, luhnCheck, doHideCreditCards, runHook };
+export { isMoesif, makeLogger, sleep, headersToObject, uuid4, luhnCheck, doHideCreditCards, runHook, prepareBody };
