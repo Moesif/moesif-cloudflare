@@ -55,11 +55,11 @@ if (typeof INSTALL_OPTIONS === 'undefined') {
     // This will mask any credit cards by checking for the Luhn algorithm
     "hideCreditCards": true,
 
-    // Set to true to prevent insertion of X-Moesif-Transaction-Id response header. 
+    // Set to true to prevent insertion of X-Moesif-Transaction-Id response header.
     // X-Moesif-Transaction-Id  is helpful for identifying transactions in Moesif.
     "disableTransactionId": false,
 
-    // Print debug messages to console. 
+    // Print debug messages to console.
     // Enable to share debug logs with Moesif support staff for quicker debug.
     "debug": false,
 
@@ -209,6 +209,9 @@ function runHook(fn, name, defaultValue) {
 
 function headersToObject(headers) {
   const result = {};
+  if (!headers) {
+    return result;
+  }
 
   for (let [key, val] of headers.entries()) {
     result[key] = val;
@@ -485,12 +488,12 @@ function batch(jobsForBatching) {
         body: body
       };
 
-      
+
       promises.push(fetch(BATCH_URL, options));
       batchCounter++;
     }
   });
-  
+
   moesifLog(`Total batches: ${batchCounter}`);
 
   // ------------------------
