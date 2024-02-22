@@ -17,6 +17,10 @@ function makeLogger(preface, options = {}) {
 function headersToObject(headers) {
   const result = {};
 
+  if (!headers) {
+    return result;
+  }
+
   for (let [key, val] of headers.entries()) {
     result[key] = val;
   }

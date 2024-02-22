@@ -94,7 +94,7 @@ function prepareOptions(options) {
   var INSTALL_PRODUCT;
   var INSTALL_TYPE = 'esm';
 
-  if (!options || options.applicationId) {
+  if (!options || !options.applicationId) {
     throw new Error('no moesif application id found');
   }
 
