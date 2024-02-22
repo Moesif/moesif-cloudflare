@@ -11,7 +11,7 @@
 import moesifMiddleware from '../../esm/src/index.mjs';
 // import moesifMiddleware from 'moesif-cloudflare';
 
-async function originalFetch(request, env, ctx) {
+async function originalFetchHandler(request, env, ctx) {
 	const url = new URL(request.url);
 	let apiUrl;
 
@@ -39,11 +39,10 @@ async function originalFetch(request, env, ctx) {
 
 const moesifOptions = {
 	applicationId: 'Your Moesif Application Id',
-  // logBody: false,
 };
 
-const fetch = moesifMiddleware(originalFetch, moesifOptions);
+const wrappedFetchHandler = moesifMiddleware(originalFetchHandler, moesifOptions);
 
 export default {
-	fetch,
+	fetch: wrappedFetchHandler,
 };

@@ -24,16 +24,16 @@ const options = {
 };
 
 // your original fetch handler.
-async function originalFetch(request, _env, context) {
+async function originalFetchHandler(request, _env, context) {
   // your code.
 }
 
 // this create a new fetch that is wrapped by moesifMiddleware
-const fetch = moesifMiddleware(originalFetch, options);
+const wrappedFetchHandler = moesifMiddleware(originalFetch, options);
 
 // export the fetch handler.
 export default {
-  fetch
+  fetch: wrappedFetchHandler
 };
 
 ```
