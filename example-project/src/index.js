@@ -38,7 +38,7 @@ async function originalFetchHandler(request, env, ctx) {
 }
 
 const moesifOptions = {
-	applicationId: 'Your Application Id',
+	applicationId: 'Your Moesif Application Id',
   identifyUser: (req, res) => {
     if (req.headers) {
       return req.headers.get('X-User-Id');
