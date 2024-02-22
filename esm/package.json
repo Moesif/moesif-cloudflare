@@ -1,12 +1,31 @@
 {
   "name": "moesif-cloudflare",
-  "version": "2.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Moesif API analytics and monetization integration for Cloudflare",
   "main": "src/index.mjs",
+  "keywords": [
+    "moesif",
+    "api",
+    "gateway",
+    "cloudflare",
+    "logging",
+    "monitoring",
+    "trace",
+    "analytics",
+    "monetization"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "team@moesif.com",
+  "author": {
+    "name": "Moesif Inc.",
+    "email": "team@moesif.com",
+    "url": "https://www.moesif.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Moesif/moesif-cloudflare"
+  },
   "type": "module",
-  "license": "ISC"
+  "license": "Apache-2.0"
 }
