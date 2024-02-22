@@ -1,6 +1,6 @@
 # Moesif Cloudflare SDK
 
-This SDK is for the Cloudflare Workers using the new ES Module Model.
+This SDK is for integration [Moesif](https://www.moesif.com) with [Cloudflare Workers](https://developers.cloudflare.com/workers/) using the new ES Module Model.
 
 ## Important Note about Legacy Service Worker Model
 
@@ -40,4 +40,10 @@ export default {
 ## Options
 
 See full list of options for moesifMiddleware in [prepareOptions.mjs](/esm/src/prepareOptions.mjs);
+
+
+### Example
+
+The [example-project folder](/example-project/) contains an example generated
+via `npm create cloudflare@latest` as in the [Cloudflare get started guide](https://developers.cloudflare.com/workers/get-started/guide/)
 
