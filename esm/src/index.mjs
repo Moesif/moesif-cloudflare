@@ -38,6 +38,7 @@ function moesifMiddleware(originalFetch, userOptions) {
     getApiVersion,
     skip,
     maskContent,
+    logBody,
     urlPatterns = [],
     debug,
     fetchTimeoutMS,
@@ -165,7 +166,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 
     let requestBody = undefined;
 
-    if (request.body && request.body instanceof ReadableStream) {
+    if (logBody && request.body && request.body instanceof ReadableStream) {
       const clonedRequest = await request.clone();
       clonedRequest._logged = true;
       request._logged = true;
@@ -192,12 +193,12 @@ function moesifMiddleware(originalFetch, userOptions) {
       const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
       let responseBody;
-      if (response) {
+      if (response && logBody) {
         moesifLog(`response=${JSON.stringify(response)}`);
         responseBody = await response.text();
         moesifLog('responseBody');
       } else {
-        moesifLog('No response logged');
+        moesifLog(`No response body logged logBody=${logBody}`);
       }
 
       ctx.waitUntil(

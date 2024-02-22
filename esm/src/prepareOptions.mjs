@@ -1,5 +1,5 @@
 //
-const identifyUser = (req, res) => {
+const identifyUser = (req, res, env, ctx) => {
   const token = req.headers.get('Authorization') || res.headers.get('Authorization');
   if (token) {
     const jwtToken = token.split(' ')[1]; // Assuming the token is in the format "Bearer <token>"
@@ -10,23 +10,23 @@ const identifyUser = (req, res) => {
   return undefined;
 };
 
-const identifyCompany = (req, res) => {
+const identifyCompany = (req, res, env, ctx) => {
   return undefined;
 };
 
-const getSessionToken = (req, res) => {
+const getSessionToken = (req, res, env, ctx) => {
   return undefined;
 };
 
-const getApiVersion = (req, res) => {
+const getApiVersion = (req, res, env, ctx) => {
   return undefined;
 };
 
-const getMetadata = (req, res) => {
+const getMetadata = (req, res, env, ctx) => {
   return undefined;
 };
 
-const skip = (req, res) => {
+const skip = (req, res, env, ctx) => {
   return false;
 };
 
@@ -69,6 +69,8 @@ function prepareOptions(options) {
     applicationId: null, // required
 
     // log request and response bodies.
+    // for bodies, the middleware splits stream by default to obtain an copy to read from
+    // if you do not read the original request body, you may get a warning that a split was wasted.
     logBody: true,
 
     // true or false

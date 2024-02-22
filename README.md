@@ -36,3 +36,8 @@ export default {
 };
 
 ```
+
+## Options
+
+See full list of options for moesifMiddleware in [prepareOptions.mjs](/esm/src/prepareOptions.mjs);
+
