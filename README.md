@@ -23,8 +23,9 @@ const options = {
   applicationId: 'YOUR MOESIF Application ID',
 };
 
+// your original fetch handler.
 async function originalFetch(request, _env, context) {
-  // your original fetch handler.
+  // your code.
 }
 
 // this create a new fetch that is wrapped by moesifMiddleware
