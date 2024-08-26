@@ -47,7 +47,7 @@ Using the SDK involves three simple steps:
 
 For example:
 
-```javascript:highlight={1,3-5,13}
+```javascript
 import moesifMiddleware from 'moesif-cloudflare';
 
 const options = {
@@ -91,7 +91,7 @@ Other troubleshooting supports:
 ## Configuration Options
 The following sections describe the available configuration options for this SDK. You can set these options in the Moesif initialization options object. See [the example Worker project code](https://github.com/Moesif/moesif-cloudflare/blob/717d1202da5996f12c74046e7c7ec75654bd819e/example-project/src/index.js#L40) for an example.
 
-You can see the full list of options in the [prepareOptions.mjs](/esm/src/prepareOptions.mjs) file.
+You can see the full list of options in the [`prepareOptions.mjs`](/esm/src/prepareOptions.mjs) file.
 
 ### `identifyUser`
 
