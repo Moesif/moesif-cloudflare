@@ -13,7 +13,7 @@ If you are using Cloudflare's [Service Workers API](https://developers.cloudflar
 please follow the [legacy instructions](/legacy/README.md).
 
 ## Prerequisites
-Before using this middleware, make sure you have the following:
+Before using this SDK, make sure you have the following:
 
 - [An active Moesif account](https://moesif.com/wrap)
 - [A Moesif Application ID](#get-your-moesif-application-id)
@@ -36,7 +36,7 @@ npm install moesif-cloudflare
 ```
 
 ## Configure the SDK
-See the available [configuration options](#configuration-options) to learn how to configure the middleware for your use case.
+See the available [configuration options](#configuration-options) to learn how to configure the SDK for your use case.
 
 ## How to Use
 Using the SDK involves three simple steps:
@@ -291,7 +291,7 @@ var options = {
 </table>
 
 A function that takes the final Moesif event model as an
-argument before the middleware sends the event model object to Moesif. 
+argument before sending the event model object to Moesif. 
 
 With `maskContent`, you can make modifications to headers or body such as
 removing certain header or body fields.
@@ -644,16 +644,15 @@ The maximum response body size in bytes to log when sending the data to Moesif.
 
 ## Example
 
-See the [`example-project` folder](/example-project/) for an example. The example 
-generated is generated using C3 (`create-cloudflare-cli`) and follows the [Cloudflare get started guide](https://developers.cloudflare.com/workers/get-started/guide/).
+See the [`example-project` folder](/example-project/) for an example. The example is generated using C3 (`create-cloudflare-cli`) and follows the [Cloudflare get started guide](https://developers.cloudflare.com/workers/get-started/guide/).
 
 ## How to Get Help
-If you face any issues using this middleware, try the [troubheshooting guidelines](#troubleshoot). For further assistance, reach out to our [support team](mailto:support@moesif.com).
+If you face any issues using this SDK, try the [troubheshooting guidelines](#troubleshoot). For further assistance, reach out to our [support team](mailto:support@moesif.com).
 
 ## Explore Other Integrations
 
 Explore other integration options from Moesif:
 
-- [Server integration options documentation](https://www.moesif.com/docs/server-integration//)
+- [Server integration options documentation](https://www.moesif.com/docs/server-integration/)
 - [Client integration options documentation](https://www.moesif.com/docs/client-integration/)
 
