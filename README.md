@@ -290,13 +290,7 @@ var options = {
   </tr>
 </table>
 
-#### Parameters
-- **`req`**: a [`Request`](https://developers.cloudflare.com/workers/runtime-apis/request/) object.
-- **`res`**: a [`Response`](https://developers.cloudflare.com/workers/runtime-apis/response/) object.
-- **`env`**: an `env` object representing the [bindings](https://developers.cloudflare.com/workers/configuration/environment-variables/) available to the Worker.
-- **`ctx`**: [a `Context` API object](https://developers.cloudflare.com/workers/runtime-apis/context/).
-
-A function that takes the final Moesif event model, rather than the Express request or response objects, as an
+A function that takes the final Moesif event model as an
 argument before the middleware sends the event model object to Moesif. 
 
 With `maskContent`, you can make modifications to headers or body such as
@@ -431,6 +425,18 @@ Name | Required | Description
 This function returns an object containing custom metadata that Moesif can associate with the request. The metadata must be a simple JavaScript object that can be converted to JSON. 
 
 For example, you may want to save a virtual machine instance ID, a trace ID, or a tenant ID with the request.
+
+```javascript
+var options = {
+  getMetadata: function (req, res, env, ctx) {
+    // your code here:
+    return {
+      foo: 'custom data',
+      bar: 'another custom data'
+    };
+  }
+}
+```
 
 ### `skip`
 <table>
