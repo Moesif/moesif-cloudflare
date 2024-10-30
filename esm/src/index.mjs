@@ -85,7 +85,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 				uri: request.url,
 				verb: request.method,
 				headers: headersToObject(request.headers),
-				ip_address: request.headers.get('cf-connecting-ip'),
+				ip_address: request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip'),
 			},
 			response: response.isEmpty
 				? undefined
