@@ -114,7 +114,7 @@ class Batcher {
         const moesifHeaders = {
           Accept: 'application/json; charset=utf-8',
           'X-Moesif-Application-Id': appId,
-          'User-Agent': 'moesif-cloudflare/2.0.0',
+          'User-Agent': 'moesif-cloudflare/2.0.1',
           'X-Moesif-Cf-Install-Id': INSTALL_ID,
           'X-Moesif-Cf-Install-Product': INSTALL_PRODUCT && INSTALL_PRODUCT.id,
           'X-Moesif-Cf-Install-Type': 'esm',
