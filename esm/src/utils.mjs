@@ -138,7 +138,17 @@ function safeParseJson(str) {
   }
 }
 
-function prepareBody(text, options={}) {
+function decompressBrotli(text) {
+  try {
+    // Cloudflare Workers support Brotli decompression natively
+    return new Response(text).text();
+  } catch (err) {
+    console.error('Error decompressing Brotli content:', err);
+    return text;
+  }
+}
+
+function prepareBody(text, options={}, contentEncoding) {
   if (!text) {
     return text;
   }
@@ -147,6 +157,11 @@ function prepareBody(text, options={}) {
     return {
       "msg": "request body size exceeded options maxBodySize"
     };
+  }
+
+  // Handle Brotli encoded content
+  if (contentEncoding === 'br') {
+    text = decompressBrotli(text);
   }
 
   const cleanedText = doHideCreditCards(text, options.hideCreditCards);
