@@ -301,6 +301,44 @@ function uuid4() {
   return uuid;
 }
 
+function decompressBrotli(text) {
+  try {
+    // Cloudflare Workers support Brotli decompression natively
+    return new Response(text).text();
+  } catch (err) {
+    console.error('Error decompressing Brotli content:', err);
+    return text;
+  }
+}
+
+function prepareBody(text, options={}, contentEncoding) {
+  if (!text) {
+    return text;
+  }
+
+  if (options.maxBodySize && text.length > options.maxBodySize) {
+    return {
+      "msg": "request body size exceeded options maxBodySize"
+    };
+  }
+
+  // Handle Brotli encoded content
+  if (contentEncoding === 'br') {
+    text = decompressBrotli(text);
+  }
+
+  const cleanedText = doHideCreditCards(text, options.hideCreditCards);
+
+  try {
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      return JSON.parse(cleanedText);
+    }
+    return cleanedText;
+  } catch (err) {
+    return cleanedText;
+  }
+}
+
 async function makeMoesifEvent(request, response, before, after, txId, requestBody, userId, companyId) {
   moesifLog(`makeMoesifEvent start`)
   moesifLog(JSON.stringify({request: request, response: response}));
@@ -336,7 +374,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
         'getApiVersion',
         undefined
       ),
-      body: requestBody ? doHideCreditCards(requestBody) : undefined,
+      body: requestBody ? prepareBody(requestBody, { hideCreditCards }, request.headers.get('content-encoding')) : undefined,
       time: before,
       uri: request.url,
       verb: request.method,
@@ -345,7 +383,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
     },
     response: response.isEmpty ? undefined : {
       time: after,
-      body: responseBody ? doHideCreditCards(responseBody) : undefined,
+      body: responseBody ? prepareBody(responseBody, { hideCreditCards }, response.headers.get('content-encoding')) : undefined,
       status: response.status,
       headers: headersToObject(response.headers),
     },
@@ -472,7 +510,7 @@ function batch(jobsForBatching) {
       const moesifHeaders = {
         'Accept': 'application/json; charset=utf-8',
         'X-Moesif-Application-Id': appId,
-        'User-Agent': 'moesif-cloudflare',
+        'User-Agent': 'moesif-cloudflare/1.0.0',
         'X-Moesif-Cf-Install-Id': INSTALL_ID,
         'X-Moesif-Cf-Install-Product': (INSTALL_PRODUCT && INSTALL_PRODUCT.id),
         'X-Moesif-Cf-Install-Type': INSTALL_TYPE
