@@ -1,3 +1,5 @@
+import brotliPromise from 'brotli-wasm';
+
 function isMoesif(request) {
   return request.url.indexOf('moesif.net') !== -1;
 }
@@ -138,17 +140,27 @@ function safeParseJson(str) {
   }
 }
 
-function decompressBrotli(text) {
+async function decompressBrotli(text) {
   try {
-    // Cloudflare Workers support Brotli decompression natively
-    return new Response(text).text();
+    // Convert the text to a Uint8Array
+    const encoder = new TextEncoder();
+    const compressedData = encoder.encode(text);
+
+    const brotli = await brotliPromise;
+
+    // Decompress using brotli-wasm
+    const decompressedData = await brotli.decompress(compressedData);
+
+    // Convert back to text
+    const decoder = new TextDecoder();
+    return decoder.decode(decompressedData);
   } catch (err) {
     console.error('Error decompressing Brotli content:', err);
     return text;
   }
 }
 
-function prepareBody(text, options={}, contentEncoding) {
+async function prepareBody(text, options={}, contentEncoding) {
   if (!text) {
     return text;
   }
@@ -161,7 +173,7 @@ function prepareBody(text, options={}, contentEncoding) {
 
   // Handle Brotli encoded content
   if (contentEncoding === 'br') {
-    text = decompressBrotli(text);
+    text = await decompressBrotli(text);
   }
 
   const cleanedText = doHideCreditCards(text, options.hideCreditCards);

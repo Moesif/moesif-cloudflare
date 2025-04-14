@@ -11,7 +11,7 @@
 import moesifMiddleware from 'moesif-cloudflare';
 // import moesifMiddleware from '../../esm/src/index.mjs';
 
-// Test data that will be Brotli encoded
+// Test data that will be compressed
 const testData = {
   message: "This is a test message",
   data: {
@@ -34,11 +34,17 @@ async function originalFetchHandler(request, env, ctx) {
 		case '/api/service2':
 			apiUrl = 'https://httpbin.org/get';
 			break;
+    case '/api/local-test':
+        apiUrl = 'http://localhost:3000/api/data';
+        break;
     case '/api/brotli-test':
-      // Create a response with Brotli encoded content
-      const response = new Response(JSON.stringify(testData));
-      // Set content encoding to brotli
-      response.headers.set('Content-Encoding', 'br');
+      // Create a response with pre-compressed Brotli data
+      const response = new Response(testData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'br'
+        }
+      });
       return response;
 		default:
 			return new Response('Service not found', { status: 404 });
@@ -55,7 +61,7 @@ async function originalFetchHandler(request, env, ctx) {
 }
 
 const moesifOptions = {
-	applicationId: 'Your Moesif Application Id',
+	applicationId: 'eyJhcHAiOiI0ODc6MjA2IiwidmVyIjoiMi4xIiwib3JnIjoiODg6MjEwIiwiaWF0IjoxNzQzNDY1NjAwfQ.xxmkt4pNGojDw31soZzA01OJxKhkAe6gsN3jAH8A16U',
   identifyUser: (req, res) => {
     if (req.headers) {
       return req.headers.get('X-User-Id');

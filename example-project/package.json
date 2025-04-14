@@ -9,9 +9,9 @@
     "test": "node test-brotli.js"
   },
   "dependencies": {
-    "moesif-cloudflare": "^2.0.2"
+    "moesif-cloudflare": "file:../esm"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.10.0"
   }
 }

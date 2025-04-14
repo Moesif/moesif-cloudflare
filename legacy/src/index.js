@@ -301,17 +301,25 @@ function uuid4() {
   return uuid;
 }
 
-function decompressBrotli(text) {
+async function decompressBrotli(text) {
   try {
-    // Cloudflare Workers support Brotli decompression natively
-    return new Response(text).text();
+    // Create a new Response with the compressed data
+    const response = new Response(text);
+    // Create a decompression stream
+    const decompressionStream = new DecompressionStream('br');
+    // Pipe the response body through the decompression stream
+    const decompressedStream = response.body.pipeThrough(decompressionStream);
+    // Create a new response with the decompressed stream
+    const decompressedResponse = new Response(decompressedStream);
+    // Get the decompressed text
+    return await decompressedResponse.text();
   } catch (err) {
     console.error('Error decompressing Brotli content:', err);
     return text;
   }
 }
 
-function prepareBody(text, options={}, contentEncoding) {
+async function prepareBody(text, options={}, contentEncoding) {
   if (!text) {
     return text;
   }
@@ -324,7 +332,7 @@ function prepareBody(text, options={}, contentEncoding) {
 
   // Handle Brotli encoded content
   if (contentEncoding === 'br') {
-    text = decompressBrotli(text);
+    text = await decompressBrotli(text);
   }
 
   const cleanedText = doHideCreditCards(text, options.hideCreditCards);
@@ -374,7 +382,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
         'getApiVersion',
         undefined
       ),
-      body: requestBody ? prepareBody(requestBody, { hideCreditCards }, request.headers.get('content-encoding')) : undefined,
+      body: requestBody ? await prepareBody(requestBody, { hideCreditCards }, request.headers.get('content-encoding')) : undefined,
       time: before,
       uri: request.url,
       verb: request.method,
@@ -383,7 +391,7 @@ async function makeMoesifEvent(request, response, before, after, txId, requestBo
     },
     response: response.isEmpty ? undefined : {
       time: after,
-      body: responseBody ? prepareBody(responseBody, { hideCreditCards }, response.headers.get('content-encoding')) : undefined,
+      body: responseBody ? await prepareBody(responseBody, { hideCreditCards }, response.headers.get('content-encoding')) : undefined,
       status: response.status,
       headers: headersToObject(response.headers),
     },

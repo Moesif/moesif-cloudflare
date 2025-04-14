@@ -80,7 +80,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 
 			request: {
 				apiVersion: runHook(() => getApiVersion(request, response, _env, ctx), 'getApiVersion', undefined),
-				body: requestBody ? prepareBody(requestBody, { hideCreditCards, maxBodySize: options.requestMaxBodySize }, request.headers.get('content-encoding')) : undefined,
+				body: requestBody ? await prepareBody(requestBody, { hideCreditCards, maxBodySize: options.requestMaxBodySize }, request.headers.get('content-encoding')) : undefined,
 				time: before,
 				uri: request.url,
 				verb: request.method,
@@ -91,7 +91,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 				? undefined
 				: {
 						time: after,
-						body: responseBody ? prepareBody(responseBody, { hideCreditCards, maxBodySize: options.responseMaxBodySize }, response.headers.get('content-encoding')) : undefined,
+						body: responseBody ? await prepareBody(responseBody, { hideCreditCards, maxBodySize: options.responseMaxBodySize }, response.headers.get('content-encoding')) : undefined,
 						status: response.status,
 						headers: headersToObject(response.headers),
 				  },
