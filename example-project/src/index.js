@@ -11,6 +11,17 @@
 import moesifMiddleware from 'moesif-cloudflare';
 // import moesifMiddleware from '../../esm/src/index.mjs';
 
+// Test data that will be Brotli encoded
+const testData = {
+  message: "This is a test message",
+  data: {
+    array: [1, 2, 3, 4, 5],
+    nested: {
+      field: "value"
+    }
+  }
+};
+
 async function originalFetchHandler(request, env, ctx) {
 	const url = new URL(request.url);
 	let apiUrl;
@@ -23,6 +34,12 @@ async function originalFetchHandler(request, env, ctx) {
 		case '/api/service2':
 			apiUrl = 'https://httpbin.org/get';
 			break;
+    case '/api/brotli-test':
+      // Create a response with Brotli encoded content
+      const response = new Response(JSON.stringify(testData));
+      // Set content encoding to brotli
+      response.headers.set('Content-Encoding', 'br');
+      return response;
 		default:
 			return new Response('Service not found', { status: 404 });
 	}
@@ -48,7 +65,8 @@ const moesifOptions = {
     if (req.headers) {
       return req.headers.get('X-Company-Id');
     }
-  }
+  },
+  debug: true // Enable debug logging to see the Brotli handling
 };
 
 const wrappedFetchHandler = moesifMiddleware(originalFetchHandler, moesifOptions);

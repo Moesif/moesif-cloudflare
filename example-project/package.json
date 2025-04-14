@@ -1,16 +1,17 @@
 {
   "name": "example-project",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Example project for moesif-cloudflare",
+  "main": "src/index.js",
   "scripts": {
-    "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "start": "wrangler dev"
+    "deploy": "wrangler deploy",
+    "test": "node test-brotli.js"
+  },
+  "dependencies": {
+    "moesif-cloudflare": "^2.0.2"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"
-  },
-  "dependencies": {
-    "moesif-cloudflare": "^2.0.0"
   }
 }
