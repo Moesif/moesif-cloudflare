@@ -1,4 +1,4 @@
-import brotliPromise from 'brotli-wasm';
+import decompress from 'brotli/decompress';
 
 function isMoesif(request) {
   return request.url.indexOf('moesif.net') !== -1;
@@ -142,14 +142,11 @@ function safeParseJson(str) {
 
 async function decompressBrotli(text) {
   try {
-    // Convert the text to a Uint8Array
+    // Convert the input text to a Uint8Array
     const encoder = new TextEncoder();
     const compressedData = encoder.encode(text);
 
-    const brotli = await brotliPromise;
-
-    // Decompress using brotli-wasm
-    const decompressedData = await brotli.decompress(compressedData);
+    const decompressedData = decompress(compressedData);
 
     // Convert back to text
     const decoder = new TextDecoder();

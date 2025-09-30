@@ -33,6 +33,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "brotli": "^1.3.3",
+    "brotli-dec-wasm": "^2.3.0",
     "brotli-wasm": "^3.0.1"
   }
 }
