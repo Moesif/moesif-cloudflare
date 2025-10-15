@@ -18,10 +18,10 @@ async function originalFetchHandler(request, env, ctx) {
 	// Route to different APIs based on the path
 	switch (url.pathname) {
 		case '/api/service1':
-			apiUrl = 'https://httpbin.org/anything';
+			apiUrl = 'https://jsonplaceholder.typicode.com/comments';
 			break;
 		case '/api/service2':
-			apiUrl = 'https://httpbin.org/get';
+			apiUrl = 'https://jsonplaceholder.typicode.com/posts';
 			break;
 		default:
 			return new Response('Service not found', { status: 404 });
@@ -38,7 +38,7 @@ async function originalFetchHandler(request, env, ctx) {
 }
 
 const moesifOptions = {
-	applicationId: 'Your Moesif Application Id',
+	applicationId: 'eyJhcHAiOiI0ODc6MjA2IiwidmVyIjoiMi4xIiwib3JnIjoiODg6MjEwIiwiaWF0IjoxNzU5Mjc2ODAwfQ.M7-sZwa6FgfedRGTgz76k4YDuB8qGyYc0msb1wUJy1w',
   identifyUser: (req, res) => {
     if (req.headers) {
       return req.headers.get('X-User-Id');

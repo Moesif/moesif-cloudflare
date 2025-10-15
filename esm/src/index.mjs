@@ -160,8 +160,22 @@ function moesifMiddleware(originalFetch, userOptions) {
 		}
 
 		moesifLog(`logging request url=${request.url}`);
-		const race = Promise.race([originalFetch(request, _env, ctx), sleep(fetchTimeoutMS)]);
-		const response = await race;
+		let response;
+		let errorCaught = null;
+		try {
+			const race = Promise.race([originalFetch(request, _env, ctx), sleep(fetchTimeoutMS)]);
+			response = await race;
+		} catch (err) {
+			errorCaught = err;
+			// Create a synthetic error response similar to Cloudflare
+			const errorMessage = err && err.message ? err.message : 'Fetch error';
+			const errorBody = `Cloudflare Worker fetch error: ${errorMessage}`;
+			response = new Response(errorBody, {
+				status: 520,
+				statusText: errorMessage,
+				headers: { 'Content-Type': 'text/plain' }
+			});
+		}
 
 		let userId = null;
 		userId = runHook(() => identifyUser(request, response, _env, ctx), 'identifyUser', undefined);
@@ -173,16 +187,20 @@ function moesifMiddleware(originalFetch, userOptions) {
 		const samplingPercentage = appConfig.getSamplingPercentage(userId, companyId);
 		if (randomNumber > samplingPercentage) {
 			moesifLog('Skip sending event to Moesif due to sampling percentage');
+			if (errorCaught) throw errorCaught;
 			return response;
 		} else {
 			const after = new Date();
 			const txId = request.headers.get(TRANSACTION_ID_HEADER) || uuid4();
 
 			let responseBody;
-			if (response && logBody) {
+			if (response && logBody && !errorCaught) {
 				moesifLog(`response=${JSON.stringify(response)}`);
 				responseBody = await response.text();
-				moesifLog('responseBody');
+				moesifLog('responseBody logged');
+			} else if (errorCaught) {
+				responseBody = await response.text();
+				moesifLog(`Error caught: ${responseBody}`);
 			} else {
 				moesifLog(`No response body logged logBody=${logBody}`);
 			}
@@ -202,6 +220,8 @@ function moesifMiddleware(originalFetch, userOptions) {
 					companyId
 				)
 			);
+
+			if (errorCaught) throw errorCaught;
 
 			if (!disableTransactionId && response) {
 				const newResponse = new Response(logBody ? responseBody : response.body, response);
