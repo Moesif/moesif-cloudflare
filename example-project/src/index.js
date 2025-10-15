@@ -23,6 +23,8 @@ async function originalFetchHandler(request, env, ctx) {
 		case '/api/service2':
 			apiUrl = 'https://jsonplaceholder.typicode.com/posts';
 			break;
+    case '/api/errorSimulate3':
+      throw new Error("Simulated error for testing");
 		default:
 			return new Response('Service not found', { status: 404 });
 	}

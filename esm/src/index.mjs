@@ -167,12 +167,11 @@ function moesifMiddleware(originalFetch, userOptions) {
 			response = await race;
 		} catch (err) {
 			errorCaught = err;
-			// Create a synthetic error response similar to Cloudflare
-			const errorMessage = err && err.message ? err.message : 'Fetch error';
-			const errorBody = `Cloudflare Worker fetch error: ${errorMessage}`;
+			// Create a synthetic error response that matches the thrown error output
+			const errorBody = err && err.stack ? err.stack : err ? err.toString() : 'Fetch error';
 			response = new Response(errorBody, {
-				status: 520,
-				statusText: errorMessage,
+				status: 500,
+				statusText: err && err.message ? err.message : 'Fetch error',
 				headers: { 'Content-Type': 'text/plain' }
 			});
 		}
