@@ -40,7 +40,7 @@ async function originalFetchHandler(request, env, ctx) {
 }
 
 const moesifOptions = {
-	applicationId: 'eyJhcHAiOiI0ODc6MjA2IiwidmVyIjoiMi4xIiwib3JnIjoiODg6MjEwIiwiaWF0IjoxNzU5Mjc2ODAwfQ.M7-sZwa6FgfedRGTgz76k4YDuB8qGyYc0msb1wUJy1w',
+	applicationId: 'Your Moesif Application Id',
   identifyUser: (req, res) => {
     if (req.headers) {
       return req.headers.get('X-User-Id');
