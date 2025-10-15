@@ -1,6 +1,6 @@
 # Moesif Cloudflare App
 
-> Important
+> Important!!
 > This is for Cloudflare Legacy App Marketplace and legacy based Service Worker API.
 > If you are using the [new EsModule Approach](https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/) please see main readme of this repo.
 
@@ -18,6 +18,8 @@ Your `Moesif Application Id` can be found in the [_Moesif Portal_](https://www.m
 After signing up for a Moesif account, your Moesif Application Id will be displayed during the onboarding steps.
 
 ## Install via Cloudflare App (Simple install)
+
+> Cloudflare deprecated their app marketplace. 
 
 * Go to the [Moesif app on Cloudflare](https://www.cloudflare.com/apps/moesif) and click _Preview_
 * Update `Your Moesif Application Id` here.
