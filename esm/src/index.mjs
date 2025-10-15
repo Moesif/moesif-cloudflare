@@ -168,7 +168,7 @@ function moesifMiddleware(originalFetch, userOptions) {
 		} catch (err) {
 			errorCaught = err;
 			// Create a synthetic error response that matches the thrown error output
-			const errorBody = err && err.stack ? err.stack : err ? err.toString() : 'Fetch error';
+			const errorBody = err ? err.toString() : 'Fetch error';
 			response = new Response(errorBody, {
 				status: 500,
 				statusText: err && err.message ? err.message : 'Fetch error',
