@@ -18,11 +18,13 @@ async function originalFetchHandler(request, env, ctx) {
 	// Route to different APIs based on the path
 	switch (url.pathname) {
 		case '/api/service1':
-			apiUrl = 'https://httpbin.org/anything';
+			apiUrl = 'https://jsonplaceholder.typicode.com/comments';
 			break;
 		case '/api/service2':
-			apiUrl = 'https://httpbin.org/get';
+			apiUrl = 'https://jsonplaceholder.typicode.com/posts';
 			break;
+    case '/api/errorSimulate3':
+      throw new Error("Simulated error for testing");
 		default:
 			return new Response('Service not found', { status: 404 });
 	}
